@@ -2,13 +2,15 @@ import {app} from "../../scripts/app.js";
 import {api} from "../../scripts/api.js";
 import {NestedNode, nestedNodeTitle, nestedNodeType} from "./nestedNode.js";
 
-const ext = {
+export const ext = {
     name: "SS.NestedNodeBuilder",
+    defs: {},
 
     async addCustomNodeDefs(defs, app) {
         console.log(defs);
         defs[nestedNodeType] = {
             category: "Not For Use",
+            type: nestedNodeType,
             description: "",
             display_name: "MUST_CREATE_NESTED_NODE_FROM_SELECTION",
             input: {required: {}},
@@ -18,24 +20,31 @@ const ext = {
             output_node: false,
         };
         console.log(api);
+        ext.defs = defs;
     },
 
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
         if (nodeData.name !== nestedNodeType) {
             return;
         }
-        let nestedNodePrototype = NestedNode.prototype;
-        // Remove the constructor from the prototype
-        delete nestedNodePrototype.constructor;
+        const nestedNodePrototype = NestedNode.prototype;
         // Add the methods from the prototype to the node
         for (const key of Object.getOwnPropertyNames(nestedNodePrototype)) {
             nodeType.prototype[key] = nestedNodePrototype[key];
         }
+        nodeType.prototype.isVirtualNode = true;
+    },
+
+    loadedGraphNode(node, app) {
+        if (node.type !== nestedNodeType) {
+            return;
+        }
+        node.refreshNest();
     },
 
     nodeCreated(node, app) {
         //
-        // Editing menu options for the node
+        // Add menu option for nesting nodes for ComfyNodes
         //
         // Save the original options
         const getBaseMenuOptions = node.getExtraMenuOptions;
@@ -60,7 +69,7 @@ const ext = {
         const selectedNodes = app.canvas.selected_nodes;
 
         // Create the nested node
-        const nestedNode = LiteGraph.createNode(nestedNodeType)
+        const nestedNode = LiteGraph.createNode(nestedNodeType);
         nestedNode.title = nestedNodeTitle;
         nestedNode.nestWorkflow(selectedNodes);
     },

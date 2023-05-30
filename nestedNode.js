@@ -1,4 +1,6 @@
 import {app} from "../../scripts/app.js";
+import {ComfyWidgets} from "../../scripts/widgets.js";
+import {ext} from "./nodeMenu.js";
 
 // Node that allows you to convert a set of nodes into a single node
 export const nestedNodeType = "NestedNode";
@@ -16,13 +18,16 @@ export class NestedNode {
         console.log("Workflow being nested:", workflow);
         this.inheritInputs(workflow);
         this.inheritOutputs(workflow);
-        this.inheritWidgets(workflow);
+        this.inheritWidgets();
         this.placeNestedNode(workflow);
         this.resizeNestedNode(workflow);
         this.removeNestedNodes(workflow);
         console.log("The resulting nested node:", this);
 
-        this.serialize_widgets = true;
+    }
+
+    refreshNest() {
+        this.inheritWidgets();
     }
 
     // How the workflow is stored
@@ -76,6 +81,9 @@ export class NestedNode {
             for (const slot in node.outputs) {
                 // Check if the output only goes to other nodes in the workflow
                 const outputNodes = node.getOutputNodes(slot);
+                if (!outputNodes) {
+                    continue;
+                }
                 let onlyWorkflow = true;
                 for (const output of outputNodes) {
                     if (!Object.values(workflow).includes(output)) {
@@ -105,13 +113,41 @@ export class NestedNode {
         }
     }
 
-    // Inherit the widgets from the workflow
-    inheritWidgets(workflow) {
+    inheritWidgets() {
+        const workflow = this.properties.serializedWorkflow;
         this.widgets = [];
-        for (const id in workflow) {
-            const node = workflow[id];
-            for (const widget of node.widgets) {
-                this.widgets.push(widget);
+        const widgets = ComfyWidgets;
+        for (const serialized of workflow) {
+            const type = serialized.type;
+            const def = ext.defs[type];
+            const required = def.input.required;
+            const optional = def.input.optional;
+            let inputs = required;
+            if (optional) {
+                inputs = Object.assign({}, required, optional);
+            }
+            for (const inputName in inputs) {
+                const inputData = inputs[inputName];
+                const type = inputData[0];
+
+                if(inputData[1]?.forceInput) {
+                    this.addInput(inputName, type);
+                } else {
+                    if (Array.isArray(type)) {
+                        // Enums
+                        widgets.COMBO(this, inputName, inputData, app);
+                    } else if (`${type}:${inputName}` in widgets) {
+                        // TODO: Support custom widgets
+                    } else if (type in widgets) {
+                        // Standard type widgets
+                        widgets[type](this, inputName, inputData, app);
+                    }
+                    // TODO: Might inherit inputs here instead of a different method
+                    // else {
+                    //     // Node connection inputs
+                    //     this.addInput(inputName, type);
+                    // }
+                }
             }
         }
     }
@@ -150,6 +186,20 @@ export class NestedNode {
 
     // Apply the workflow during prompt execution
     applyToGraph(workflow) {
+        console.log(workflow);
 
+    }
+
+    // Update node on property change
+    onPropertyChanged(name, value) {
+        if (name === "serializedWorkflow") {
+            console.log("serializedWorkflow changed", value);
+        }
+    }
+
+    onWidgetChanged(name, value, old_value, widget) {
+        console.log("Widget changed", name, value, old_value, widget);
+        let workflow = this.properties.workflow;
+        console.log(workflow);
     }
 }
