@@ -33,7 +33,6 @@ const ext = {
         // Create the nested node
         const nestedNode = LiteGraph.createNode(nodeName);
         nestedNode.nestWorkflow(selectedNodes);
-        app.graph.add(nestedNode);
     }
 };
 
