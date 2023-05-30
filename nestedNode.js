@@ -13,8 +13,9 @@ class NestedNode {
         // Node setup
         this.properties.serializedWorkflow = this.serializeWorkflow(workflow);
         console.log("Workflow being nested:", workflow);
-        this.registerInputs(workflow);
-        this.registerOutputs(workflow);
+        this.inheritInputs(workflow);
+        this.inheritOutputs(workflow);
+        this.inheritWidgets(workflow);
         this.placeNestedNode(workflow);
         this.resizeNestedNode(workflow);
         this.removeNestedNodes(workflow);
@@ -32,7 +33,7 @@ class NestedNode {
     }
 
     // Add inputs to the node
-    registerInputs(workflow) {
+    inheritInputs(workflow) {
         this.inputs = [];
         let nested_slot = -1;
 
@@ -61,7 +62,7 @@ class NestedNode {
     }
 
     // Add outputs to the node
-    registerOutputs(workflow) {
+    inheritOutputs(workflow) {
         this.outputs = [];
         let nested_slot = -1;
 
@@ -99,6 +100,11 @@ class NestedNode {
                 }
             }
         }
+    }
+
+    // Inherit the widgets from the workflow
+    inheritWidgets(workflow) {
+
     }
 
     // Remove the nodes that are being nested
