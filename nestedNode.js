@@ -1,9 +1,10 @@
 import {app} from "../../scripts/app.js";
 
 // Node that allows you to convert a set of nodes into a single node
-export const nodeName = "NestedNode";
+export const nestedNodeType = "NestedNode";
+export const nestedNodeTitle = "Nested Node";
 
-class NestedNode {
+export class NestedNode {
 
     // Nest the workflow within this node
     nestWorkflow(workflow) {
@@ -20,6 +21,8 @@ class NestedNode {
         this.resizeNestedNode(workflow);
         this.removeNestedNodes(workflow);
         console.log("The resulting nested node:", this);
+
+        this.serialize_widgets = true;
     }
 
     // How the workflow is stored
@@ -104,7 +107,13 @@ class NestedNode {
 
     // Inherit the widgets from the workflow
     inheritWidgets(workflow) {
-
+        this.widgets = [];
+        for (const id in workflow) {
+            const node = workflow[id];
+            for (const widget of node.widgets) {
+                this.widgets.push(widget);
+            }
+        }
     }
 
     // Remove the nodes that are being nested
@@ -144,15 +153,3 @@ class NestedNode {
 
     }
 }
-
-// Register the extension
-app.registerExtension({
-    name: "SS.NestedNode",
-
-    registerCustomNodes() {
-        // Register the node
-        LiteGraph.registerNodeType(nodeName, Object.assign(NestedNode, {
-            title_mode: LiteGraph.NORMAL_TITLE, title: nodeName, collapsable: true,
-        }));
-    },
-});
