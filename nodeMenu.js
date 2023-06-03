@@ -1,8 +1,9 @@
 import {app} from "../../scripts/app.js";
 import {NestedNode, nestedNodeTitle, nestedNodeType, serializeWorkflow} from "./nestedNode.js";
+import {$el} from "../../scripts/ui.js";
 
 export const ext = {
-    name: "SS.NestedNodeBuilder", defs: {}, nestedDef: {}, nestedNodeDefs: {}, nestedNodeId: 0,
+    name: "SS.NestedNodeBuilder", defs: {}, nestedDef: {}, nestedNodeDefs: {},
 
     /**
      * Called before the app registers nodes from definitions.
@@ -94,7 +95,6 @@ export const ext = {
         //
         // Add the def
         this.nestedNodeDefs[nestedDef.name] = nestedDef;
-        this.nestedNodeId++;
         // Reload the graph
         LiteGraph.registered_node_types = {};
         app.registerNodes().then(() => {
@@ -158,7 +158,7 @@ export const ext = {
         return nestedDef;
     },
 
-    nestSelectedDialog(selectedNodes) {
+    createNestSelectedDialog(selectedNodes) {
         const pos = [window.innerWidth / 3, 2 * window.innerHeight / 3];
         let dialog = app.canvas.createDialog(
             "<span class='name'>" +
@@ -178,6 +178,7 @@ export const ext = {
                 );
                 return;
             } else {
+                // Successfully entered a valid name
                 this.nestSelectedNodes(selectedNodes, name);
             }
             dialog.close();
@@ -205,7 +206,7 @@ export const ext = {
         const selectedNodes = app.canvas.selected_nodes;
 
         // Prompt user to enter name for the node type
-        this.nestSelectedDialog(selectedNodes);
+        this.createNestSelectedDialog(selectedNodes);
     },
 
     nestSelectedNodes(selectedNodes, uniqueName) {
@@ -214,6 +215,9 @@ export const ext = {
 
         // Add the def, this will be added to defs in addCustomNodeDefs
         this.nestedNodeDefs[nestedDef.name] = nestedDef;
+
+        // Download the nested node definition
+        saveDef(nestedDef);
 
         // Register nodes again to add the nested node definition
         LiteGraph.registered_node_types = {};
@@ -246,3 +250,21 @@ function isSerializedWorkflowsEqual(a, b) {
     }
     return true;
 }
+
+function saveDef(nestedDef) {
+    const json = JSON.stringify(nestedDef, null, 2); // convert the data to a JSON string
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = $el("a", {
+        href: url,
+        download: nestedDef.name,
+        style: { display: "none" },
+        parent: document.body,
+    });
+    a.click();
+    setTimeout(function () {
+        a.remove();
+        window.URL.revokeObjectURL(url);
+    }, 0);
+}
+

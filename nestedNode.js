@@ -25,10 +25,6 @@ export class NestedNode {
         console.log(this.serialize);
     }
 
-    refreshNest() {
-        this.inheritWidgets();
-    }
-
     // Remove the nodes that are being nested
     removeNestedNodes(workflow) {
         for (const id in workflow) {
@@ -64,8 +60,7 @@ export class NestedNode {
 
     // Apply the workflow during prompt execution
     applyToGraph(workflow) {
-        console.log(workflow);
-
+        console.log("applying serialized workflow to graph");
     }
 
     // Update node on property change
@@ -73,11 +68,9 @@ export class NestedNode {
         if (name === "serializedWorkflow") {
             console.log("serializedWorkflow changed", value);
         }
-
-        console.log(this.serialize);
     }
 
-    refreshWidgets() {
+    updateSerializedWorkflow() {
         console.log("refreshing widgets");
         const workflow = this.properties.serializedWorkflow;
         for (const i in workflow) {
@@ -89,19 +82,7 @@ export class NestedNode {
     }
 
     onWidgetChanged(name, value, old_value, widget) {
-        this.refreshWidgets();
+        this.updateSerializedWorkflow();
     }
-
-    // onNodeCreated() {
-    //     // Replace the unique nested node type with the generic nested node type during serialization
-    //     const serialize = this.serialize;
-    //     this.serialize = function() {
-    //         const uniqueType = this.type;
-    //         this.type = nestedNodeType;
-    //         const serialized = serialize.call(this);
-    //         this.type = uniqueType;
-    //         return serialized;
-    //     }
-    // }
 
 }
