@@ -53,7 +53,6 @@ export const ext = {
         if (!isNestedNode) {
             return;
         }
-        console.log("[SS] Adding nested node methods:", nodeType.prototype);
 
 
         // Add Nested Node methods to the node ComfyNode
@@ -77,7 +76,8 @@ export const ext = {
         }
 
         // Use the serialized workflow to create a nested node definition
-        const nestedDef = this.createNestedDef(node.properties.serializedWorkflow);
+        const nestedDef = this.createNestedDef(node.properties.serializedWorkflow, node.type);
+        console.log("[SS] loaded graph node, generated def", nestedDef);
 
         //
         // If the definition already exists, then the node will be loaded with the existing definition
@@ -94,7 +94,9 @@ export const ext = {
         //
         // Add the def
         this.nestedNodeDefs[nestedDef.name] = nestedDef;
+        this.nestedNodeId++;
         // Reload the graph
+        LiteGraph.registered_node_types = {};
         app.registerNodes().then(() => {
             // Reload the graph data
             app.loadGraphData(app.graph.serialize());
@@ -119,7 +121,7 @@ export const ext = {
             // Add new menu options for this extension
             options.push({
                 content: "Nest Selected Nodes", callback: () => {
-                    ext.nestSelectedNodes();
+                    ext.onMenuNestSelectedNodes();
                 }
             });
 
@@ -128,18 +130,18 @@ export const ext = {
         };
     },
 
-    createNestedDef(serializedWorkflow) {
-        const uniqueId = this.nestedNodeId++;
+    createNestedDef(serializedWorkflow, uniqueName) {
+        // Replace spaces with underscores for the type
+        const uniqueType = uniqueName.replace(/\s/g, "_");
         let nestedDef = {
-            name: nestedNodeType + uniqueId,
-            display_name: nestedNodeTitle,
+            name: uniqueType,
+            display_name: uniqueName,
             category: "Nested Nodes",
             description: serializedWorkflow,
             input: {},
             output: [],
             output_is_list: [],
             output_name: [],
-            nested_node_id: uniqueId,
         };
         for (const id in serializedWorkflow) {
             const node = serializedWorkflow[id];
@@ -156,17 +158,65 @@ export const ext = {
         return nestedDef;
     },
 
-    nestSelectedNodes() {
+    nestSelectedDialog(selectedNodes) {
+        const pos = [window.innerWidth / 3, 2 * window.innerHeight / 3];
+        let dialog = app.canvas.createDialog(
+            "<span class='name'>" +
+            "Name for nested node:" +
+            "</span>" +
+            "<input autofocus type='text' class='value'/>" +
+            "<button>OK</button>",
+            {position: pos}
+        );
+        let input = dialog.querySelector("input");
+        const enterName = () => {
+            // Check if the name already exists in the defs
+            const name = input.value;
+            if (name in this.nestedNodeDefs) {
+                app.ui.dialog.show(
+                    `The name "${name}" is already used for a nested node. Please choose a different name.`
+                );
+                return;
+            } else {
+                this.nestSelectedNodes(selectedNodes, name);
+            }
+            dialog.close();
+        }
+        input.addEventListener("keydown", function(e) {
+            if (e.keyCode == 27) {
+                //ESC
+                dialog.close();
+            } else if (e.keyCode == 13) {
+                // ENTER
+                enterName(); // save
+            } else if (e.keyCode != 13) {
+                dialog.modified();
+                return;
+            }
+            e.preventDefault();
+            e.stopPropagation();
+        });
+        let button = dialog.querySelector("button");
+        button.addEventListener("click", enterName);
+    },
+
+    onMenuNestSelectedNodes() {
         // Use the selected nodes for the nested node
         const selectedNodes = app.canvas.selected_nodes;
 
+        // Prompt user to enter name for the node type
+        this.nestSelectedDialog(selectedNodes);
+    },
+
+    nestSelectedNodes(selectedNodes, uniqueName) {
         // Add a custom definition for the nested node
-        const nestedDef = this.createNestedDef(serializeWorkflow(selectedNodes));
+        const nestedDef = this.createNestedDef(serializeWorkflow(selectedNodes), uniqueName);
 
         // Add the def, this will be added to defs in addCustomNodeDefs
         this.nestedNodeDefs[nestedDef.name] = nestedDef;
 
         // Register nodes again to add the nested node definition
+        LiteGraph.registered_node_types = {};
         app.registerNodes().then(() => {
             // Create the nested node
             const nestedNode = LiteGraph.createNode(nestedDef.name);
@@ -175,7 +225,7 @@ export const ext = {
         }, (error) => {
             console.log("Error registering nodes:", error);
         });
-    },
+    }
 };
 
 app.registerExtension(ext);
