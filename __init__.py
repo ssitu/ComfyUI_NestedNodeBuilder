@@ -2,7 +2,6 @@ import yaml
 import shutil
 import json
 import os
-import sys
 
 # Paths
 ext_path = os.path.dirname(os.path.realpath(__file__))
@@ -16,8 +15,7 @@ config_nested_nodes_path = "nested_nodes_path"
 
 
 def load_nested_node_defs():
-    defs = []
-    print(os.listdir("."))
+    defs_list = []
     with open(config_path, 'r') as config_file:
         try:
             config = yaml.safe_load(config_file)
@@ -32,7 +30,6 @@ def load_nested_node_defs():
         if not os.path.isabs(nested_nodes_path):
             nested_nodes_path = os.path.join(ext_path, nested_nodes_path)
 
-
         # Load each json file in the nested_nodes_path and add it to the defs list
         for file_name in os.listdir(nested_nodes_path):
             if file_name.endswith(".json"):
@@ -42,14 +39,21 @@ def load_nested_node_defs():
                     except json.JSONDecodeError as json_e:
                         print(f"[NestedNodeBuilder] Error loading {file_name}:", json_e)
                         continue
-                    defs.append(node_def)
+                    if "name" not in node_def:
+                        print("[NestedNodeBuilder] missing property \"name\" in node definition:", file_name)
+                        continue
+                    defs_list.append(node_def)
+    defs = {}
+    for node_def in defs_list:
+        key = node_def["name"]
+        defs[key] = node_def
     return defs
 
 
 def place_js():
     src = os.path.join(ext_path, "js")
     dst = os.path.join(js_extensions_path, repo_name)
-    shutil.copytree(src, dst)
+    shutil.copytree(src, dst, dirs_exist_ok=True)
 
 
 def server_add_def_route():

@@ -15,19 +15,13 @@ export const ext = {
     async addCustomNodeDefs(defs, app) {
         // Save definitions for reference
         this.defs = defs;
+        // Grab nested node definitions
+        const resp = await fetch("/nested_node_defs")
+        const nestedNodeDefs = await resp.json();
+        // Merge nested node definitions
+        Object.assign(this.nestedNodeDefs, nestedNodeDefs);
         // Add nested node definitions if they exist
         Object.assign(defs, this.nestedNodeDefs);
-        // Default nested node definition
-        if (Object.keys(this.nestedNodeDefs).length === 0) {
-            defs[nestedNodeType] = {
-                category: "NOT_FOR_USE",
-                display_name: nestedNodeTitle,
-                name: nestedNodeType,
-                input: { required: {} },
-                output: [],
-                output_name: [],
-            };
-        }
         console.log("[SS] Added nested node definitions:", defs);
     },
 
