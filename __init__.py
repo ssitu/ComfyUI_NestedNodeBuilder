@@ -81,6 +81,7 @@ def server_add_def_route():
 
 
 server_add_def_route()
+place_js()
 
 # This is required so that the extension is displayed as imported successfully
 NODE_CLASS_MAPPINGS = {}
