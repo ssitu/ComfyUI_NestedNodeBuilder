@@ -1,6 +1,6 @@
-import {app} from "../../scripts/app.js";
-import {NestedNode, nestedNodeTitle, nestedNodeType, serializeWorkflow} from "./nestedNode.js";
-import {$el} from "../../scripts/ui.js";
+import { app } from "../../scripts/app.js";
+import { NestedNode, nestedNodeTitle, nestedNodeType, serializeWorkflow } from "./nestedNode.js";
+import { $el } from "../../scripts/ui.js";
 
 export const ext = {
     name: "SS.NestedNodeBuilder", defs: {}, nestedDef: {}, nestedNodeDefs: {},
@@ -23,7 +23,7 @@ export const ext = {
                 category: "NOT_FOR_USE",
                 display_name: nestedNodeTitle,
                 name: nestedNodeType,
-                input: {required: {}},
+                input: { required: {} },
                 output: [],
                 output_name: [],
             };
@@ -166,7 +166,7 @@ export const ext = {
             "</span>" +
             "<input autofocus type='text' class='value'/>" +
             "<button>OK</button>",
-            {position: pos}
+            { position: pos }
         );
         let input = dialog.querySelector("input");
         const enterName = () => {
@@ -183,7 +183,7 @@ export const ext = {
             }
             dialog.close();
         }
-        input.addEventListener("keydown", function(e) {
+        input.addEventListener("keydown", function (e) {
             if (e.keyCode == 27) {
                 //ESC
                 dialog.close();

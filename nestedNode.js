@@ -1,4 +1,4 @@
-import {app} from "../../scripts/app.js";
+import { app } from "../../scripts/app.js";
 
 // Node that allows you to convert a set of nodes into a single node
 export const nestedNodeType = "NestedNode";
