@@ -213,28 +213,29 @@ export const ext = {
         this.nestedNodeDefs[nestedDef.name] = nestedDef;
 
         // Download the nested node definition
-        const successful = saveDef(nestedDef);
-        if (!successful) {
-            app.ui.dialog.show(`Was unable to save the nested node. Check the console for more details.`);
-            return;
-        }
-
-        // Register nodes again to add the nested node definition
-        LiteGraph.registered_node_types = {};
-        app.registerNodes().then(() => {
-            // Create the nested node
-            const nestedNode = LiteGraph.createNode(nestedDef.name);
-            app.graph.add(nestedNode);
-            nestedNode.nestWorkflow(selectedNodes);
-        }, (error) => {
-            console.log("Error registering nodes:", error);
-        });
+        saveDef(nestedDef).then(
+            (successful) => {
+                // Register nodes again to add the nested node definition
+                LiteGraph.registered_node_types = {};
+                app.registerNodes().then(() => {
+                    // Create the nested node
+                    const nestedNode = LiteGraph.createNode(nestedDef.name);
+                    app.graph.add(nestedNode);
+                    nestedNode.nestWorkflow(selectedNodes);
+                }, (error) => {
+                    console.log("Error registering nodes:", error);
+                });
+            }, 
+            (error) => {
+                app.ui.dialog.show(`Was unable to save the nested node. Check the console for more details.`);
+            }
+        );
     }
 };
 
 app.registerExtension(ext);
 
-function saveDef(nestedDef) {
+async function saveDef(nestedDef) {
     // // Save by downloading through browser
     // const json = JSON.stringify(nestedDef, null, 2); // convert the data to a JSON string
     // const blob = new Blob([json], { type: "application/json" });
@@ -257,15 +258,8 @@ function saveDef(nestedDef) {
         body: JSON.stringify(nestedDef)
     };
     console.log("[NestedNodeBuilder] Saving nested node def:", nestedDef);
-    fetch("/nested_node_defs", request).then(
-        (response) => {
-            console.log("[NestedNodeBuilder] Response:", response);
-            if (response.status === 200) {
-                return true;
-            }
-            return false;
-        }
-    );
+    const response = await fetch("/nested_node_defs", request);
+    return response.status === 200;
 }
 
 function mapLinksToNodes(serializedWorkflow) {
