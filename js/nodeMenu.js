@@ -1,5 +1,5 @@
 import { app } from "../../scripts/app.js";
-import { NestedNode, nestedNodeTitle, nestedNodeType, serializeWorkflow } from "./nestedNode.js";
+import { NestedNode, serializeWorkflow } from "./nestedNode.js";
 import { $el } from "../../scripts/ui.js";
 
 export const ext = {
@@ -141,17 +141,21 @@ export const ext = {
             output_is_list: [],
             output_name: [],
         };
+        // Create a mapping of links
+        const linksMapping = mapLinksToNodes(serializedWorkflow);
+        // Create a list of node ids
+        const nodesIdArr = [];
+        for (const node of serializedWorkflow) {
+            nodesIdArr.push(node.id);
+        }
+        // Inherit inputs and outputs for each node
         for (const id in serializedWorkflow) {
             const node = serializedWorkflow[id];
             const nodeDef = this.defs[node.type];
-            // Concatenate inputs
-            for (const inputType in nodeDef.input) {
-                nestedDef.input[inputType] = Object.assign({}, nestedDef.input[inputType], nodeDef.input[inputType]);
-            }
-            // Concatenate outputs
-            nestedDef.output = nestedDef.output.concat(nodeDef.output);
-            nestedDef.output_name = nestedDef.output_name.concat(nodeDef.output_name);
-            nestedDef.output_is_list = nestedDef.output_is_list.concat(nodeDef.output_is_list);
+            // Inherit inputs
+            inheritInputs(node, nodeDef, nestedDef, nodesIdArr, linksMapping);
+            // Inherit outputs
+            inheritOutputs(node, nodeDef, nestedDef, nodesIdArr, linksMapping);
         }
         return nestedDef;
     },
@@ -159,11 +163,7 @@ export const ext = {
     createNestSelectedDialog(selectedNodes) {
         const pos = [window.innerWidth / 3, 2 * window.innerHeight / 3];
         let dialog = app.canvas.createDialog(
-            "<span class='name'>" +
-            "Name for nested node:" +
-            "</span>" +
-            "<input autofocus type='text' class='value'/>" +
-            "<button>OK</button>",
+            "<span class='name'>Name for nested node:</span><input autofocus type='text' class='value'/><button>OK</button>",
             { position: pos }
         );
         let input = dialog.querySelector("input");
@@ -171,9 +171,7 @@ export const ext = {
             // Check if the name already exists in the defs
             const name = input.value;
             if (name in this.nestedNodeDefs) {
-                app.ui.dialog.show(
-                    `The name "${name}" is already used for a nested node. Please choose a different name.`
-                );
+                app.ui.dialog.show(`The name "${name}" is already used for a nested node. Please choose a different name.`);
                 return;
             } else {
                 // Successfully entered a valid name
@@ -232,32 +230,12 @@ export const ext = {
 
 app.registerExtension(ext);
 
-
-function isSerializedWorkflowsEqual(a, b) {
-    // Test if two serialized workflows are equal
-    if (a.length !== b.length) {
-        return false;
-    }
-    for (const i in a) {
-        const nodeA = a[i];
-        const nodeB = b[i];
-        // Types should be equal
-        if (nodeA.type !== nodeB.type) {
-            return false;
-        }
-    }
-    return true;
-}
-
 function saveDef(nestedDef) {
     const json = JSON.stringify(nestedDef, null, 2); // convert the data to a JSON string
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = $el("a", {
-        href: url,
-        download: nestedDef.name,
-        style: { display: "none" },
-        parent: document.body,
+        href: url, download: nestedDef.name, style: { display: "none" }, parent: document.body,
     });
     a.click();
     setTimeout(function () {
@@ -265,4 +243,104 @@ function saveDef(nestedDef) {
         window.URL.revokeObjectURL(url);
     }, 0);
 }
+
+function mapLinksToNodes(serializedWorkflow) {
+    // Mapping
+    const links = {};
+    // Iterate over nodes and add links to mapping
+    for (const node of serializedWorkflow) {
+        // Add the destination node id for each link
+        for (const input of node.inputs ?? []) {
+            // input.link is either null or a link id
+            if (input.link === null) {
+                continue;
+            }
+            // Add the link entry if it doesn't exist
+            if (links[input.link] === undefined) {
+                links[input.link] = {};
+            }
+            // Set the destination node id
+            links[input.link].dstId = node.id;
+        }
+        // Add the source node id for each link
+        for (const output of node.outputs ?? []) {
+            // For each link, add the source node id
+            for (const link of output.links) {
+                // Add the link entry if it doesn't exist
+                if (links[link] === undefined) {
+                    links[link] = {};
+                }
+                // Set the source node id
+                links[link].srcId = node.id;
+            }
+        }
+    }
+    return links;
+}
+
+function inheritInputs(node, nodeDef, nestedDef, nodesIdArr, linkMapping) {
+    // For each input from nodeDef, add it to the nestedDef if the input is connected
+    // to a node outside the serialized workflow
+    for (const inputType in nodeDef.input) { // inputType is required, optional, etc.
+        // Add the input type if it doesn't exist
+        if (!(inputType in nestedDef.input)) {
+            nestedDef.input[inputType] = {};
+        }
+        let linkInputIdx = 0;
+        for (const inputName in nodeDef.input[inputType]) {
+            const isRemainingWidgets = node.inputs === undefined || linkInputIdx >= node.inputs.length;
+            if (isRemainingWidgets || inputName !== node.inputs[linkInputIdx].name) {
+                // This input is a widget, add by default
+                nestedDef.input[inputType][inputName] = nodeDef.input[inputType][inputName];
+                continue;
+            }
+            // If the input is connected to a node within the serialized workflow,
+            // then don't add it as an input.
+            const link = node.inputs[linkInputIdx].link;
+            const entry = linkMapping[link];
+            if (link !== null && nodesIdArr.includes(entry.srcId)) {
+                // This input is either not connected or
+                // connected to a node within the serialized workflow
+                // Do not add it as an input
+            } else {
+                // Else, input not linked or linked to an outside node, so inherit the input
+                nestedDef.input[inputType][inputName] = nodeDef.input[inputType][inputName];
+            }
+            linkInputIdx++;
+        }
+    }
+}
+
+
+function inheritOutputs(node, nodeDef, nestedDef, nodesIdArr, linksMapping) {
+    // Somewhat similar to inheritInputs.
+    // Outputs do not have a type, and they can connect to multiple nodes.
+    // Inputs were either a link or a widget.
+    // Only keep outputs that connect to nodes outside the nested workflow.
+    for (const outputIdx in nodeDef.output) {
+        const links = node.outputs[outputIdx].links;
+        // Keep output if no links
+        let keepOutput = links === null;
+        for (const link of links ?? []) {
+            const entry = linksMapping[link];
+            if (entry.dstId === undefined) {
+                // This output is connected to a node outside the nested workflow
+                keepOutput = true;
+                break;
+            }
+        }
+        if (!keepOutput) {
+            // This output is not connected to a node outside the nested workflow
+            // So don't add it to the nested node
+            continue;
+        }
+        const defOutput = nodeDef.output[outputIdx];
+        const defOutputName = nodeDef.output_name[outputIdx];
+        const defOutputIsList = nodeDef.output_is_list[outputIdx];
+        nestedDef.output.push(defOutput);
+        nestedDef.output_name.push(defOutputName);
+        nestedDef.output_is_list.push(defOutputIsList);
+    }
+}
+
 
