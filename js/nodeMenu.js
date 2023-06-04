@@ -22,7 +22,7 @@ export const ext = {
         Object.assign(this.nestedNodeDefs, nestedNodeDefs);
         // Add nested node definitions if they exist
         Object.assign(defs, this.nestedNodeDefs);
-        console.log("[SS] Added nested node definitions:", defs);
+        console.log("[NestedNodeBuilder] Added nested node definitions:", defs);
     },
 
     /**
@@ -35,9 +35,6 @@ export const ext = {
      */
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
         // Return if the node is not a nested node
-        if (Object.keys(this.nestedNodeDefs).length === 0) {
-            return;
-        }
         let isNestedNode = false;
         for (const defName in this.nestedNodeDefs) {
             if (defName === nodeData.name) {
@@ -56,7 +53,7 @@ export const ext = {
             nodeType.prototype[key] = nestedNodePrototype[key];
         }
         nodeType.prototype.isVirtualNode = true;
-        console.log("[SS] Added nested node methods:", nodeType.prototype);
+        console.log("[NestedNodeBuilder] Added nested node methods:", nodeType.prototype);
     },
 
     /**
@@ -70,23 +67,30 @@ export const ext = {
             return;
         }
 
+        // Return if a nested node definition with the same name already exists
+        if (this.nestedNodeDefs[node.type]) {
+            return;
+        }
+
         // Use the serialized workflow to create a nested node definition
         const nestedDef = this.createNestedDef(node.properties.serializedWorkflow, node.type);
-        console.log("[SS] loaded graph node, generated def", nestedDef);
+        console.log("[NestedNodeBuilder] loaded graph node, generated def", nestedDef);
 
         //
         // If the definition already exists, then the node will be loaded with the existing definition
         //
         for (const defName in this.nestedNodeDefs) {
             const def = this.nestedNodeDefs[defName];
-            if (isSerializedWorkflowsEqual(def.description, nestedDef.description)) {
+            if (def.name === nestedDef.name) {
                 return;
             }
         }
 
         //
-        // Otherwise, add the definition and reload the graph
+        // When the nested node is loaded but missing def, it can still work.
+        // Might remove this in the future.
         //
+
         // Add the def
         this.nestedNodeDefs[nestedDef.name] = nestedDef;
         // Reload the graph

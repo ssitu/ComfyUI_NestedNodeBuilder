@@ -60,7 +60,7 @@ export class NestedNode {
 
     // Apply the workflow during prompt execution
     applyToGraph(workflow) {
-        console.log("applying serialized workflow to graph");
+        console.log("[NestedNodeBuilder] Applying serialized workflow to graph", workflow);
     }
 
     // Update node on property change

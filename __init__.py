@@ -84,9 +84,13 @@ def server_add_def_route():
     setattr(server.PromptServer, "add_routes", add_routes_wrapper)
 
 
-server_add_def_route()
-place_js()
+if __name__ != "__main__":
+    server_add_def_route()
+    place_js()
 
-# This is required so that the extension is displayed as imported successfully
-NODE_CLASS_MAPPINGS = {}
-__all__ = ["NODE_CLASS_MAPPINGS"]
+    # This is required so that the extension is displayed as imported successfully
+    NODE_CLASS_MAPPINGS = {}
+    __all__ = ["NODE_CLASS_MAPPINGS"]
+
+else:  # For development
+    place_js()
