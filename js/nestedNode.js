@@ -22,6 +22,7 @@ export class NestedNode {
         this.placeNestedNode(workflow);
         this.resizeNestedNode();
         this.removeNestedNodes(workflow);
+        this.inheritWidgetValues();
     }
 
     // Remove the nodes that are being nested
