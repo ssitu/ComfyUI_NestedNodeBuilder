@@ -213,7 +213,11 @@ export const ext = {
         this.nestedNodeDefs[nestedDef.name] = nestedDef;
 
         // Download the nested node definition
-        saveDef(nestedDef);
+        const successful = saveDef(nestedDef);
+        if (!successful) {
+            app.ui.dialog.show(`Was unable to save the nested node. Check the console for more details.`);
+            return;
+        }
 
         // Register nodes again to add the nested node definition
         LiteGraph.registered_node_types = {};
@@ -231,17 +235,37 @@ export const ext = {
 app.registerExtension(ext);
 
 function saveDef(nestedDef) {
-    const json = JSON.stringify(nestedDef, null, 2); // convert the data to a JSON string
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = $el("a", {
-        href: url, download: nestedDef.name, style: { display: "none" }, parent: document.body,
-    });
-    a.click();
-    setTimeout(function () {
-        a.remove();
-        window.URL.revokeObjectURL(url);
-    }, 0);
+    // // Save by downloading through browser
+    // const json = JSON.stringify(nestedDef, null, 2); // convert the data to a JSON string
+    // const blob = new Blob([json], { type: "application/json" });
+    // const url = URL.createObjectURL(blob);
+    // const a = $el("a", {
+    //     href: url, download: nestedDef.name, style: { display: "none" }, parent: document.body,
+    // });
+    // a.click();
+    // setTimeout(function () {
+    //     a.remove();
+    //     window.URL.revokeObjectURL(url);
+    // }, 0);
+
+    // Save by sending to server
+    const request = {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(nestedDef)
+    };
+    console.log("[NestedNodeBuilder] Saving nested node def:", nestedDef);
+    fetch("/nested_node_defs", request).then(
+        (response) => {
+            console.log("[NestedNodeBuilder] Response:", response);
+            if (response.status === 200) {
+                return true;
+            }
+            return false;
+        }
+    );
 }
 
 function mapLinksToNodes(serializedWorkflow) {
