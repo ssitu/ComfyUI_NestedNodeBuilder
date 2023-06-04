@@ -61,13 +61,14 @@ export class NestedNode {
     inheritWidgetValues() {
         const serialized = this.properties.serializedWorkflow;
         this.widgets_values = [];
+        let widgetIdx = 0;
         for (const i in serialized) {
             const node = serialized[i];
             for (const j in node.widgets_values) {
                 const widget_value = node.widgets_values[j];
                 this.widgets_values.push(widget_value);
-                const widget = node.widgets[j];
-                widget.value = widget_value;
+                this.widgets[widgetIdx].value = widget_value;
+                widgetIdx++;
             }
         }
     }
@@ -80,7 +81,8 @@ export class NestedNode {
     // Update node on property change
     onPropertyChanged(name, value) {
         if (name === "serializedWorkflow") {
-            // this.inheritWidgetValues();
+            console.log("[NestedNodeBuilder] Serialized workflow changed", structuredClone(value));
+            this.inheritWidgetValues();
         }
     }
 

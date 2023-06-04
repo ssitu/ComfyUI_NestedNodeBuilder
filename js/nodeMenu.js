@@ -320,7 +320,7 @@ function inheritOutputs(node, nodeDef, nestedDef, nodesIdArr, linksMapping) {
     for (const outputIdx in nodeDef.output) {
         const links = node.outputs[outputIdx].links;
         // Keep output if no links
-        let keepOutput = links === null;
+        let keepOutput = links === null || links.length === 0;
         for (const link of links ?? []) {
             const entry = linksMapping[link];
             if (entry.dstId === undefined) {
