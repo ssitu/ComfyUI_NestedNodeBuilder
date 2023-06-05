@@ -39,24 +39,86 @@ export function cleanLinks(serializedWorkflow) {
     }
 }
 
-export function serializedWorkflowToGraph(serializedWorkflow) {
-    const linksMapping = mapLinksToNodes(serializedWorkflow);
+export function applyNestedNode(nestedNode, workflow, serializedWorkflow) {
+    console.log("[NestedNodeBuilder] Applying nested node, serializedWorkflow:", structuredClone(serializedWorkflow));
     // Create a temporary graph to leverage the existing logic
     const graph = new LiteGraph.LGraph();
+
+    // Add the original workflow
+    graph.configure(workflow);
+
+
+    // Add the nodes inside the nested node
+    const nestedNodes = [];
     for (const serializedNode of serializedWorkflow) {
         const node = LiteGraph.createNode(serializedNode.type);
         node.configure(serializedNode);
         graph.add(node);
+        nestedNodes.push(node);
     }
-    console.log("[NestedNodeBuilder] Graph created", structuredClone(graph.serialize()))
+    console.log(nestedNodes);
+
+    // Determine the link mapping of the nested nodes
+    const newSerializedWorkflow = serializeWorkflow(nestedNodes);
+    console.log(newSerializedWorkflow);
+    const linksMapping = mapLinksToNodes(newSerializedWorkflow);
+    console.log(linksMapping);
+
+    // Link the nodes inside the nested node
     for (const link in linksMapping) {
         const entry = linksMapping[link];
-        console.log(entry);
         if (entry && entry.srcId && entry.dstId) {
             graph.getNodeById(entry.srcId).connect(entry.srcSlot, graph.getNodeById(entry.dstId), entry.dstSlot);
         }
     }
-    console.log("[NestedNodeBuilder] Graph linked", structuredClone(graph.serialize()))
+
+    // Link nodes in the workflow to the nodes nested by the nested node
+    let nestedInputSlot = 0;
+    let nestedOutputSlot = 0;
+    // Assuming that the order of inputs and outputs of each node of the nested workflow 
+    // is in the same order as the inputs and outputs of the nested node
+    console.log(nestedNodes);
+    for (const node of nestedNodes) {
+        for (let inputSlot = 0; inputSlot < (node.inputs ?? []).length; inputSlot++) {
+            // Out of bounds, rest of the inputs are not connected to the outside
+            if (nestedInputSlot >= nestedNode.inputs.length) {
+                break;
+            }
+            // If types don't match, then skip this input
+            if (node.inputs[inputSlot].type !== nestedNode.inputs[nestedInputSlot].type) {
+                continue;
+            }
+            const link = nestedNode.getInputLink(nestedInputSlot);
+            if (link) { // Just in case
+                const originNode = graph.getNodeById(link.origin_id);
+                originNode.connect(link.origin_slot, node, inputSlot);
+            }
+            nestedInputSlot++;
+        }
+        for (let outputSlot = 0; outputSlot < (node.outputs ?? []).length; outputSlot++) {
+            // Out of bounds, rest of the outputs are not connected to the outside
+            if (nestedOutputSlot >= nestedNode.outputs.length) {
+                break;
+            }
+            // If types don't match, then skip this output
+            if (node.outputs[outputSlot].type !== nestedNode.outputs[nestedOutputSlot].type) {
+                continue;
+            }
+            const links = nestedNode.getOutputInfo(nestedOutputSlot).links;
+            for (const linkId of links ?? []) {
+                const link = graph.links[linkId];
+                if (link) {
+                    const targetNode = graph.getNodeById(link.target_id);
+                    node.connect(outputSlot, targetNode, link.target_slot);
+                }
+            }
+            nestedOutputSlot++;
+        }
+    }
+
+    // Remove the nested node, must use id because a clone of the node is in the graph
+    graph.remove(graph.getNodeById(nestedNode.id));
+
     const graphSerialized = graph.serialize();
     return graphSerialized;
 }
@@ -125,9 +187,8 @@ export class NestedNode {
 
     // Is called during prompt execution
     applyToGraph(workflow) {
-        console.log("[NestedNodeBuilder] Applying serialized workflow to graph", structuredClone(workflow));
-        const graphSerialized = serializedWorkflowToGraph(this.properties.serializedWorkflow);
-        console.log("[NestedNodeBuilder] Graph serialized", structuredClone(graphSerialized));
+        const graphSerialized = applyNestedNode(this, workflow, this.properties.serializedWorkflow);
+        workflow = graphSerialized;
     }
 
     // Update node on property change
