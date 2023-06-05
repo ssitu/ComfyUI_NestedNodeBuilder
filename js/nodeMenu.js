@@ -262,13 +262,14 @@ async function saveDef(nestedDef) {
     return response.status === 200;
 }
 
-function mapLinksToNodes(serializedWorkflow) {
+export function mapLinksToNodes(serializedWorkflow) {
     // Mapping
     const links = {};
     // Iterate over nodes and add links to mapping
     for (const node of serializedWorkflow) {
         // Add the destination node id for each link
-        for (const input of node.inputs ?? []) {
+        for (const inputIdx in node.inputs ?? []) {
+            const input = node.inputs[inputIdx];
             // input.link is either null or a link id
             if (input.link === null) {
                 continue;
@@ -279,9 +280,12 @@ function mapLinksToNodes(serializedWorkflow) {
             }
             // Set the destination node id
             links[input.link].dstId = node.id;
+            // Set the destination slot
+            links[input.link].dstSlot = Number(inputIdx);
         }
         // Add the source node id for each link
-        for (const output of node.outputs ?? []) {
+        for (const outputIdx in node.outputs ?? []) {
+            const output = node.outputs[outputIdx];
             // For each link, add the source node id
             for (const link of output.links) {
                 // Add the link entry if it doesn't exist
@@ -290,6 +294,8 @@ function mapLinksToNodes(serializedWorkflow) {
                 }
                 // Set the source node id
                 links[link].srcId = node.id;
+                // Set the source slot
+                links[link].srcSlot = Number(outputIdx);
             }
         }
     }
