@@ -53,6 +53,14 @@ def load_nested_node_defs():
     for node_def in defs_list:
         key = node_def["name"]
         defs[key] = node_def
+
+    # Add the nested node defs
+    # import nodes
+    # from .nested_nodes import createNestedNodeClass
+    # for node_def in defs_list:
+    #     nodes.NODE_CLASS_MAPPINGS[node_def["name"]] = createNestedNodeClass(node_def)
+    #     nodes.NODE_DISPLAY_NAME_MAPPINGS[node_def["name"]] = node_def["display_name"]
+
     return defs
 
 

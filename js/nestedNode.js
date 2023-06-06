@@ -1,5 +1,5 @@
 import { app } from "../../scripts/app.js";
-import { mapLinksToNodes } from "./nodeMenu.js";
+import { mapLinksToNodes, isOutputInternal } from "./nodeMenu.js";
 
 // Node that allows you to convert a set of nodes into a single node
 export const nestedNodeType = "NestedNode";
@@ -17,7 +17,8 @@ export function serializeWorkflow(workflow) {
 export function cleanLinks(serializedWorkflow) {
     // Remove links that are not connections between nodes within the workflow
     const linksMapping = mapLinksToNodes(serializedWorkflow);
-    for (const node of serializedWorkflow) {
+    const result = structuredClone(serializedWorkflow);
+    for (const node of result) {
         for (const input of node.inputs ?? []) { // Some nodes don't have inputs
             const entry = linksMapping[input.link];
             const isLinkWithinWorkflow = entry && entry.srcId && entry.dstId;
@@ -37,90 +38,22 @@ export function cleanLinks(serializedWorkflow) {
             }
         }
     }
+    return result;
 }
 
-export function applyNestedNode(nestedNode, workflow, serializedWorkflow) {
-    console.log("[NestedNodeBuilder] Applying nested node, serializedWorkflow:", structuredClone(serializedWorkflow));
-    // Create a temporary graph to leverage the existing logic
-    const graph = new LiteGraph.LGraph();
-
-    // Add the original workflow
-    graph.configure(workflow);
-
-
-    // Add the nodes inside the nested node
-    const nestedNodes = [];
-    for (const serializedNode of serializedWorkflow) {
-        const node = LiteGraph.createNode(serializedNode.type);
-        node.configure(serializedNode);
-        graph.add(node);
-        nestedNodes.push(node);
+function averagePos(nodes) {
+    let x = 0;
+    let y = 0;
+    let count = 0;
+    for (const i in nodes) {
+        const node = nodes[i];
+        x += node.pos[0];
+        y += node.pos[1];
+        count++;
     }
-    console.log(nestedNodes);
-
-    // Determine the link mapping of the nested nodes
-    const newSerializedWorkflow = serializeWorkflow(nestedNodes);
-    console.log(newSerializedWorkflow);
-    const linksMapping = mapLinksToNodes(newSerializedWorkflow);
-    console.log(linksMapping);
-
-    // Link the nodes inside the nested node
-    for (const link in linksMapping) {
-        const entry = linksMapping[link];
-        if (entry && entry.srcId && entry.dstId) {
-            graph.getNodeById(entry.srcId).connect(entry.srcSlot, graph.getNodeById(entry.dstId), entry.dstSlot);
-        }
-    }
-
-    // Link nodes in the workflow to the nodes nested by the nested node
-    let nestedInputSlot = 0;
-    let nestedOutputSlot = 0;
-    // Assuming that the order of inputs and outputs of each node of the nested workflow 
-    // is in the same order as the inputs and outputs of the nested node
-    console.log(nestedNodes);
-    for (const node of nestedNodes) {
-        for (let inputSlot = 0; inputSlot < (node.inputs ?? []).length; inputSlot++) {
-            // Out of bounds, rest of the inputs are not connected to the outside
-            if (nestedInputSlot >= nestedNode.inputs.length) {
-                break;
-            }
-            // If types don't match, then skip this input
-            if (node.inputs[inputSlot].type !== nestedNode.inputs[nestedInputSlot].type) {
-                continue;
-            }
-            const link = nestedNode.getInputLink(nestedInputSlot);
-            if (link) { // Just in case
-                const originNode = graph.getNodeById(link.origin_id);
-                originNode.connect(link.origin_slot, node, inputSlot);
-            }
-            nestedInputSlot++;
-        }
-        for (let outputSlot = 0; outputSlot < (node.outputs ?? []).length; outputSlot++) {
-            // Out of bounds, rest of the outputs are not connected to the outside
-            if (nestedOutputSlot >= nestedNode.outputs.length) {
-                break;
-            }
-            // If types don't match, then skip this output
-            if (node.outputs[outputSlot].type !== nestedNode.outputs[nestedOutputSlot].type) {
-                continue;
-            }
-            const links = nestedNode.getOutputInfo(nestedOutputSlot).links;
-            for (const linkId of links ?? []) {
-                const link = graph.links[linkId];
-                if (link) {
-                    const targetNode = graph.getNodeById(link.target_id);
-                    node.connect(outputSlot, targetNode, link.target_slot);
-                }
-            }
-            nestedOutputSlot++;
-        }
-    }
-
-    // Remove the nested node, must use id because a clone of the node is in the graph
-    graph.remove(graph.getNodeById(nestedNode.id));
-
-    const graphSerialized = graph.serialize();
-    return graphSerialized;
+    x /= count;
+    y /= count;
+    return [x, y];
 }
 
 export class NestedNode {
@@ -129,11 +62,11 @@ export class NestedNode {
     nestWorkflow(workflow) {
         // Node setup
         this.properties.serializedWorkflow = serializeWorkflow(workflow);
-        cleanLinks(this.properties.serializedWorkflow);
         this.placeNestedNode(workflow);
         this.resizeNestedNode();
-        this.removeNestedNodes(workflow);
+        this.inheritLinks();
         this.inheritWidgetValues();
+        this.removeNestedNodes(workflow);
     }
 
     // Remove the nodes that are being nested
@@ -146,21 +79,7 @@ export class NestedNode {
 
     // Set the location of the nested node
     placeNestedNode(workflow) {
-        // Find the average location of the nested nodes
-        let x = 0;
-        let y = 0;
-        let count = 0;
-        for (const id in workflow) {
-            const node = workflow[id];
-            x += node.pos[0];
-            y += node.pos[1];
-            count++;
-        }
-        x /= count;
-        y /= count;
-
-        // Set the location of the nested node
-        this.pos = [x, y];
+        this.pos = averagePos(workflow)
     }
 
     // Resize the nested node
@@ -185,10 +104,84 @@ export class NestedNode {
         }
     }
 
-    // Is called during prompt execution
-    applyToGraph(workflow) {
-        const graphSerialized = applyNestedNode(this, workflow, this.properties.serializedWorkflow);
-        workflow = graphSerialized;
+    // Inherit the links of its serialized workflow, 
+    // must be before the nodes that are being nested are removed from the graph
+    inheritLinks() {
+        const serialized = this.properties.serializedWorkflow;
+        const linksMapping = mapLinksToNodes(serialized);
+        for (const linkId in linksMapping) {
+            const entry = linksMapping[linkId];
+            if (entry.srcId && entry.dstId) { // Link between nodes within the nested workflow
+                continue;
+            }
+            const link = app.graph.links[linkId];
+            if (entry.dstId) { // Input connected from outside
+                // This will be the new target node
+                const src = app.graph.getNodeById(link.origin_id);
+                const dstSlot = this.getNestedInputSlot(entry.dstId, entry.dstSlot);
+                src.connect(link.origin_slot, this, dstSlot);
+            }
+            else if (entry.srcId) { // Output connected to outside
+                // This will be the new origin node
+                const dst = app.graph.getNodeById(link.target_id);
+                const srcSlot = this.getNestedOutputSlot(entry.srcId, entry.srcSlot);
+                this.connect(srcSlot, dst, link.target_slot);
+            }
+        }
+    }
+
+    getNestedInputSlot(internalNodeId, internalSlotId) {
+        // Converts a node slot that was nested into a slot of the resulting nested node
+        const serialized = this.properties.serializedWorkflow;
+        let slotIdx = 0;
+        for (const i in serialized) {
+            const node = serialized[i];
+            if (node.id === internalNodeId) {
+                if (internalSlotId >= node.inputs.length) {
+                    return null;
+                }
+                return slotIdx + internalSlotId;
+            }
+            slotIdx += node.inputs.length;
+        }
+        return null;
+    }
+
+    getNestedOutputSlot(internalNodeId, internalSlotId) {
+        // Converts a node slot that was nested into a slot of the resulting nested node
+        const serialized = this.properties.serializedWorkflow;
+        let slotIdx = 0;
+
+        const linksMapping = mapLinksToNodes(serialized);
+        for (const i in serialized) {
+            const node = serialized[i];
+            if (node.id === internalNodeId) {
+                if (internalSlotId >= node.outputs.length) {
+                    return null;
+                }
+                return slotIdx + internalSlotId;
+            }
+            let numNonInternalOutputs = 0;
+            for (const j in node.outputs) {
+                // const output = node.outputs[j];
+                // if (!output.links || output.links.length === 0) {
+                //     numNonInternalOutputs++;
+                //     continue;
+                // }
+                // for (const link of output.links) {
+                //     const entry = linksMapping[link];
+                //     if (!(entry.srcId && entry.dstId)) {
+                //         numNonInternalOutputs++;
+                //         break;
+                //     }
+                // }
+                if (!isOutputInternal(node, j, linksMapping)) {
+                    numNonInternalOutputs++;
+                }
+            }
+            slotIdx += numNonInternalOutputs;
+        }
+        return null;
     }
 
     // Update node on property change
@@ -201,11 +194,13 @@ export class NestedNode {
 
     updateSerializedWorkflow() {
         // Update the serialized workflow with the current values of the widgets
-        const workflow = this.properties.serializedWorkflow;
-        for (const i in workflow) {
-            const node = workflow[i];
+        const serialized = this.properties.serializedWorkflow;
+        let widgetIdx = 0;
+        for (const i in serialized) {
+            const node = serialized[i];
             for (const j in node.widgets_values) {
-
+                node.widgets_values[j] = this.widgets[widgetIdx].value;
+                widgetIdx++;
             }
         }
     }
@@ -214,4 +209,118 @@ export class NestedNode {
         this.updateSerializedWorkflow();
     }
 
+    unnest() {
+        const serializedWorkflow = this.properties.serializedWorkflow;
+        const linksMapping = mapLinksToNodes(serializedWorkflow);
+        // Add the nodes inside the nested node
+        const nestedNodes = [];
+        const internalOutputList = [];
+        const avgPos = averagePos(serializedWorkflow);
+        const serializedToNodeMapping = {};
+        for (const idx in serializedWorkflow) {
+            const serializedNode = serializedWorkflow[idx];
+            const node = LiteGraph.createNode(serializedNode.type);
+            node.configure(serializedNode);
+
+            const dx = serializedNode.pos[0] - avgPos[0];
+            const dy = serializedNode.pos[1] - avgPos[1];
+            node.pos = [this.pos[0] + dx, this.pos[1] + dy];
+
+            const isOutputsInternal = [];
+            for (const i in serializedNode.outputs) {
+                const output = serializedNode.outputs[i];
+                let isInternal = true;
+                if (!output.links || output.links.length === 0) {
+                    isInternal = false;
+                }
+                for (const link of output.links ?? []) {
+                    const entry = linksMapping[link];
+                    if (!(entry.srcId && entry.dstId)) {
+                        isInternal = false;
+                        break;
+                    }
+                }
+                isOutputsInternal.push(isInternal);
+            }
+            internalOutputList.push(isOutputsInternal);
+
+            // Clear links
+            for (const i in node.inputs) {
+                node.inputs[i].link = null;
+            }
+            for (const i in node.outputs) {
+                node.outputs[i].links = [];
+            }
+
+            app.graph.add(node);
+            nestedNodes.push(node);
+            serializedToNodeMapping[serializedNode.id] = node;
+        }
+
+
+        // Link the nodes inside the nested node
+        for (const link in linksMapping) {
+            const entry = linksMapping[link];
+            if (entry && entry.srcId && entry.dstId) {
+                // app.graph.getNodeById(entry.srcId).connect(entry.srcSlot, app.graph.getNodeById(entry.dstId), entry.dstSlot);
+                const src = serializedToNodeMapping[entry.srcId];
+                const dst = serializedToNodeMapping[entry.dstId];
+                src.connect(entry.srcSlot, dst, entry.dstSlot);
+            }
+        }
+
+        // Link nodes in the workflow to the nodes nested by the nested node
+        let nestedInputSlot = 0;
+        let nestedOutputSlot = 0;
+        // Assuming that the order of inputs and outputs of each node of the nested workflow 
+        // is in the same order as the inputs and outputs of the nested node
+        for (const i in nestedNodes) {
+            const node = nestedNodes[i];
+            for (let inputSlot = 0; inputSlot < (node.inputs ?? []).length; inputSlot++) {
+                // Out of bounds, rest of the inputs are not connected to the outside
+                if (nestedInputSlot >= this.inputs.length) {
+                    break;
+                }
+                // If types don't match, then skip this input
+                if (node.inputs[inputSlot].type !== this.inputs[nestedInputSlot].type) {
+                    continue;
+                }
+                const link = this.getInputLink(nestedInputSlot);
+                if (link) { // Just in case
+                    const originNode = app.graph.getNodeById(link.origin_id);
+                    originNode.connect(link.origin_slot, node, inputSlot);
+                }
+                nestedInputSlot++;
+            }
+            for (let outputSlot = 0; outputSlot < (node.outputs ?? []).length; outputSlot++) {
+                // Out of bounds, rest of the outputs are not connected to the outside
+                if (nestedOutputSlot >= this.outputs.length) {
+                    break;
+                }
+                // If types don't match, then skip this output
+                if (node.outputs[outputSlot].type !== this.outputs[nestedOutputSlot].type) {
+                    continue;
+                }
+                // If the output is only connected internally, then skip this output
+                if (internalOutputList[i][outputSlot]) {
+                    continue;
+                }
+
+                const links = this.getOutputInfo(nestedOutputSlot).links;
+                for (const linkId of links ?? []) {
+                    const link = app.graph.links[linkId];
+                    if (link) {
+                        const targetNode = app.graph.getNodeById(link.target_id);
+                        node.connect(outputSlot, targetNode, link.target_slot);
+                    }
+                }
+                nestedOutputSlot++;
+            }
+        }
+
+        // Remove the nested node
+        app.graph.remove(graph.getNodeById(this.id));
+
+        return nestedNodes;
+    }
 }

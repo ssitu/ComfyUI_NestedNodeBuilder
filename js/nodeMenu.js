@@ -5,6 +5,36 @@ import { $el } from "../../scripts/ui.js";
 export const ext = {
     name: "SS.NestedNodeBuilder", defs: {}, nestedDef: {}, nestedNodeDefs: {},
 
+    async setup(app) {
+		const originalQueuePrompt = app.queuePrompt;
+        app.queuePrompt = async function (number, batchsize) {
+            const nestedNodesUnnested = {};
+            // Unnest all nested nodes
+            const nodes = app.graph._nodes;
+            for (const i in nodes) {
+                const node = nodes[i];
+                if (node.properties.serializedWorkflow) {
+                    const unnestedNodes = node.unnest();
+                    nestedNodesUnnested[node.type] = unnestedNodes;
+                }
+            }
+            // Call the original function
+            try {
+                await originalQueuePrompt.call(this, number, batchsize);
+            }
+            catch (error) {
+                console.log("Error in queuePrompt:", error);
+            }
+            // Renest all nested nodes
+            for (const nestedType in nestedNodesUnnested) {
+                const unnestedNodes = nestedNodesUnnested[nestedType];
+                const node = LiteGraph.createNode(nestedType);
+                app.graph.add(node);
+                node.nestWorkflow(unnestedNodes);
+            }
+        }
+	},
+
     /**
      * Called before the app registers nodes from definitions.
      * Used to add nested node definitions.
@@ -23,6 +53,12 @@ export const ext = {
         // Add nested node definitions if they exist
         Object.assign(defs, this.nestedNodeDefs);
         console.log("[NestedNodeBuilder] Added nested node definitions:", defs);
+
+        // Add nested node definitions through the server
+        // const resp = await fetch("/nested_node_defs");
+        // if (resp.status !== 200) {
+        //     console.log("[NestedNodeBuilder] Error getting nested node definitions:", resp);
+        // }
     },
 
     /**
@@ -52,7 +88,7 @@ export const ext = {
         for (const key of Object.getOwnPropertyNames(nestedNodePrototype)) {
             nodeType.prototype[key] = nestedNodePrototype[key];
         }
-        nodeType.prototype.isVirtualNode = true;
+        // nodeType.prototype.isVirtualNode = true;
         console.log("[NestedNodeBuilder] Added nested node methods:", nodeType.prototype);
     },
 
@@ -230,7 +266,13 @@ export const ext = {
                 app.ui.dialog.show(`Was unable to save the nested node. Check the console for more details.`);
             }
         );
+    },
+
+    mapLinks(selectedNodes) {
+        const serializedWorkflow = serializeWorkflow(selectedNodes);
+        return mapLinksToNodes(serializedWorkflow);
     }
+
 };
 
 app.registerExtension(ext);
@@ -287,7 +329,7 @@ export function mapLinksToNodes(serializedWorkflow) {
         for (const outputIdx in node.outputs ?? []) {
             const output = node.outputs[outputIdx];
             // For each link, add the source node id
-            for (const link of output.links) {
+            for (const link of output.links ?? []) {
                 // Add the link entry if it doesn't exist
                 if (links[link] === undefined) {
                     links[link] = {};
@@ -312,10 +354,17 @@ function inheritInputs(node, nodeDef, nestedDef, nodesIdArr, linkMapping) {
         }
         let linkInputIdx = 0;
         for (const inputName in nodeDef.input[inputType]) {
+            // Change the input name if it already exists
+            let uniqueInputName = inputName;
+            let i = 2;
+            while (uniqueInputName in nestedDef.input[inputType]) {
+                uniqueInputName = inputName + i;
+                i++;
+            }
             const isRemainingWidgets = node.inputs === undefined || linkInputIdx >= node.inputs.length;
             if (isRemainingWidgets || inputName !== node.inputs[linkInputIdx].name) {
                 // This input is a widget, add by default
-                nestedDef.input[inputType][inputName] = nodeDef.input[inputType][inputName];
+                nestedDef.input[inputType][uniqueInputName] = nodeDef.input[inputType][inputName];
                 continue;
             }
             // If the input is connected to a node within the serialized workflow,
@@ -328,11 +377,28 @@ function inheritInputs(node, nodeDef, nestedDef, nodesIdArr, linkMapping) {
                 // Do not add it as an input
             } else {
                 // Else, input not linked or linked to an outside node, so inherit the input
-                nestedDef.input[inputType][inputName] = nodeDef.input[inputType][inputName];
+                nestedDef.input[inputType][uniqueInputName] = nodeDef.input[inputType][inputName];
             }
             linkInputIdx++;
         }
     }
+}
+
+export function isOutputInternal(node, outputIdx, linkMapping) {
+    // Keep output if no links
+    const links = node.outputs[outputIdx].links;
+    if (links === null || links.length === 0) {
+        return false;
+    }
+    // Keep output if any link is connected to a node outside the nested workflow
+    for (const link of links) {
+        const entry = linkMapping[link];
+        if (entry.dstId === undefined) {
+            // This output is connected to a node outside the nested workflow
+            return false;
+        }
+    }
+    return true;
 }
 
 
@@ -342,20 +408,7 @@ function inheritOutputs(node, nodeDef, nestedDef, nodesIdArr, linksMapping) {
     // Inputs were either a link or a widget.
     // Only keep outputs that connect to nodes outside the nested workflow.
     for (const outputIdx in nodeDef.output) {
-        const links = node.outputs[outputIdx].links;
-        // Keep output if no links
-        let keepOutput = links === null || links.length === 0;
-        for (const link of links ?? []) {
-            const entry = linksMapping[link];
-            if (entry.dstId === undefined) {
-                // This output is connected to a node outside the nested workflow
-                keepOutput = true;
-                break;
-            }
-        }
-        if (!keepOutput) {
-            // This output is not connected to a node outside the nested workflow
-            // So don't add it to the nested node
+        if (isOutputInternal(node, outputIdx, linksMapping)) {
             continue;
         }
         const defOutput = nodeDef.output[outputIdx];
@@ -366,5 +419,3 @@ function inheritOutputs(node, nodeDef, nestedDef, nodesIdArr, linksMapping) {
         nestedDef.output_is_list.push(defOutputIsList);
     }
 }
-
-
