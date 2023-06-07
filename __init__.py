@@ -2,13 +2,7 @@ import yaml
 import shutil
 import json
 import os
-
-# Paths
-ext_path = os.path.dirname(os.path.realpath(__file__))
-repo_name = os.path.basename(ext_path)
-default_nested_nodes_path = os.path.join(ext_path, "nested_nodes")
-js_extensions_path = os.path.join(ext_path, os.pardir, os.pardir, "web", "extensions")
-config_path = os.path.join(ext_path, "config.yaml")
+from .folder_paths import ext_path, default_nested_nodes_path, config_path, js_extensions_repo_path
 
 # Config keys
 config_nested_nodes_path = "nested_nodes_path"
@@ -86,7 +80,7 @@ def save_nested_def(node_def):
 
 def place_js():
     src = os.path.join(ext_path, "js")
-    dst = os.path.join(js_extensions_path, repo_name)
+    dst = js_extensions_repo_path
     shutil.copytree(src, dst, dirs_exist_ok=True)
 
 
