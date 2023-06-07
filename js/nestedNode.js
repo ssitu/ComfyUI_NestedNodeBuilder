@@ -1,5 +1,5 @@
 import { app } from "../../scripts/app.js";
-import { mapLinksToNodes, isOutputInternal } from "./nodeMenu.js";
+import { mapLinksToNodes, isOutputInternal, isInputInternal } from "./nodeMenu.js";
 
 // Node that allows you to convert a set of nodes into a single node
 export const nestedNodeType = "NestedNode";
@@ -58,6 +58,20 @@ function averagePos(nodes) {
 
 export class NestedNode {
 
+    isSetup = false;
+
+    nestedNodeSetup() {
+        if (!this.isSetup) {
+            console.log("[NestedNodeBuilder] Nested node setup");
+            this.addWidgetListeners();
+            this.isSetup = true;
+        }
+    }
+
+    onAdded() {
+        this.nestedNodeSetup();
+    }
+
     // Nest the workflow within this node
     nestWorkflow(workflow) {
         // Node setup
@@ -104,6 +118,17 @@ export class NestedNode {
         }
     }
 
+    // Add listeners to the widgets
+    addWidgetListeners() {
+        for (const widget of this.widgets) {
+            if (widget.inputEl) {
+                widget.inputEl.addEventListener("change", (e) => {
+                    this.onWidgetChanged(widget.name, widget.value, widget.value, widget);
+                });
+            }
+        }
+    }
+
     // Inherit the links of its serialized workflow, 
     // must be before the nodes that are being nested are removed from the graph
     inheritLinks() {
@@ -133,16 +158,18 @@ export class NestedNode {
     getNestedInputSlot(internalNodeId, internalSlotId) {
         // Converts a node slot that was nested into a slot of the resulting nested node
         const serialized = this.properties.serializedWorkflow;
+        const linksMapping = mapLinksToNodes(serialized);
         let slotIdx = 0;
         for (const i in serialized) {
             const node = serialized[i];
-            if (node.id === internalNodeId) {
-                if (internalSlotId >= node.inputs.length) {
-                    return null;
+            for (let inputIdx = 0; inputIdx < (node.inputs ?? []).length; inputIdx++) {
+                if (node.id === internalNodeId && inputIdx === internalSlotId) {
+                    return slotIdx;
                 }
-                return slotIdx + internalSlotId;
+                if (!isInputInternal(node, inputIdx, linksMapping)) {
+                    slotIdx++;
+                }
             }
-            slotIdx += node.inputs.length;
         }
         return null;
     }
@@ -190,6 +217,7 @@ export class NestedNode {
             console.log("[NestedNodeBuilder] Serialized workflow changed", structuredClone(value));
             this.inheritWidgetValues();
         }
+        console.log("[NestedNodeBuilder] Property changed", name, value);
     }
 
     updateSerializedWorkflow() {
@@ -207,6 +235,7 @@ export class NestedNode {
 
     onWidgetChanged(name, value, old_value, widget) {
         this.updateSerializedWorkflow();
+        console.log("[NestedNodeBuilder] Widget changed", name, value, old_value, widget);
     }
 
     unnest() {

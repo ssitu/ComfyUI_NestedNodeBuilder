@@ -88,7 +88,7 @@ export const ext = {
         for (const key of Object.getOwnPropertyNames(nestedNodePrototype)) {
             nodeType.prototype[key] = nestedNodePrototype[key];
         }
-        // nodeType.prototype.isVirtualNode = true;
+
         console.log("[NestedNodeBuilder] Added nested node methods:", nodeType.prototype);
     },
 
@@ -179,19 +179,14 @@ export const ext = {
         };
         // Create a mapping of links
         const linksMapping = mapLinksToNodes(serializedWorkflow);
-        // Create a list of node ids
-        const nodesIdArr = [];
-        for (const node of serializedWorkflow) {
-            nodesIdArr.push(node.id);
-        }
         // Inherit inputs and outputs for each node
         for (const id in serializedWorkflow) {
             const node = serializedWorkflow[id];
             const nodeDef = this.defs[node.type];
             // Inherit inputs
-            inheritInputs(node, nodeDef, nestedDef, nodesIdArr, linksMapping);
+            inheritInputs(node, nodeDef, nestedDef, linksMapping);
             // Inherit outputs
-            inheritOutputs(node, nodeDef, nestedDef, nodesIdArr, linksMapping);
+            inheritOutputs(node, nodeDef, nestedDef, linksMapping);
         }
         return nestedDef;
     },
@@ -344,7 +339,7 @@ export function mapLinksToNodes(serializedWorkflow) {
     return links;
 }
 
-function inheritInputs(node, nodeDef, nestedDef, nodesIdArr, linkMapping) {
+function inheritInputs(node, nodeDef, nestedDef, linkMapping) {
     // For each input from nodeDef, add it to the nestedDef if the input is connected
     // to a node outside the serialized workflow
     for (const inputType in nodeDef.input) { // inputType is required, optional, etc.
@@ -367,21 +362,42 @@ function inheritInputs(node, nodeDef, nestedDef, nodesIdArr, linkMapping) {
                 nestedDef.input[inputType][uniqueInputName] = nodeDef.input[inputType][inputName];
                 continue;
             }
-            // If the input is connected to a node within the serialized workflow,
-            // then don't add it as an input.
-            const link = node.inputs[linkInputIdx].link;
-            const entry = linkMapping[link];
-            if (link !== null && nodesIdArr.includes(entry.srcId)) {
-                // This input is either not connected or
-                // connected to a node within the serialized workflow
-                // Do not add it as an input
-            } else {
-                // Else, input not linked or linked to an outside node, so inherit the input
+            // // If the input is connected to a node within the serialized workflow,
+            // // then don't add it as an input.
+            // const link = node.inputs[linkInputIdx].link;
+            // const entry = linkMapping[link];
+            // if (link !== null && nodesIdArr.includes(entry.srcId)) {
+            //     // This input is either not connected or
+            //     // connected to a node within the serialized workflow
+            //     // Do not add it as an input
+            // } else {
+            //     // Else, input not linked or linked to an outside node, so inherit the input
+            //     nestedDef.input[inputType][uniqueInputName] = nodeDef.input[inputType][inputName];
+            // }
+
+            // Add the input if it is not connected to a node within the serialized workflow
+            if (!isInputInternal(node, linkInputIdx, linkMapping)) {
                 nestedDef.input[inputType][uniqueInputName] = nodeDef.input[inputType][inputName];
             }
             linkInputIdx++;
         }
     }
+}
+
+export function isInputInternal(node, inputIdx, linkMapping) {
+    console.log("isInputInternal", node, inputIdx, linkMapping);
+    // Keep input if no link
+    const link = node.inputs[inputIdx].link;
+    if (link === null) {
+        return false;
+    }
+    // Keep input if link is connected to a node outside the nested workflow
+    const entry = linkMapping[link];
+    if (entry.srcId === undefined) {
+        // This input is connected to a node outside the nested workflow
+        return false;
+    }
+    return true;
 }
 
 export function isOutputInternal(node, outputIdx, linkMapping) {
@@ -402,7 +418,7 @@ export function isOutputInternal(node, outputIdx, linkMapping) {
 }
 
 
-function inheritOutputs(node, nodeDef, nestedDef, nodesIdArr, linksMapping) {
+function inheritOutputs(node, nodeDef, nestedDef, linksMapping) {
     // Somewhat similar to inheritInputs.
     // Outputs do not have a type, and they can connect to multiple nodes.
     // Inputs were either a link or a widget.
