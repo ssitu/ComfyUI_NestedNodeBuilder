@@ -1,5 +1,5 @@
 import os
-from folder_paths import js_extensions_repo_path, repo_name
+from directory_paths import js_extensions_repo_path, repo_name
 
 print(f"Uninstalling extra files installed by {repo_name}...")
 

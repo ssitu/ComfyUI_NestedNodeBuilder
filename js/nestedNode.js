@@ -134,6 +134,7 @@ export class NestedNode {
     inheritLinks() {
         const serialized = this.properties.serializedWorkflow;
         const linksMapping = mapLinksToNodes(serialized);
+        console.log("[NestedNodeBuilder] Links mapping", linksMapping);
         for (const linkId in linksMapping) {
             const entry = linksMapping[linkId];
             if (entry.srcId && entry.dstId) { // Link between nodes within the nested workflow
@@ -318,6 +319,10 @@ export class NestedNode {
                 if (node.inputs[inputSlot].type !== this.inputs[nestedInputSlot].type) {
                     continue;
                 }
+                // nestedInputSlot = this.getNestedInputSlot(node.id, inputSlot);
+                // if (nestedInputSlot === null) {
+                //     continue;
+                // }
                 const link = this.getInputLink(nestedInputSlot);
                 if (link) { // Just in case
                     const originNode = app.graph.getNodeById(link.origin_id);
@@ -355,5 +360,22 @@ export class NestedNode {
         app.graph.remove(graph.getNodeById(this.id));
 
         return nestedNodes;
+    }
+
+    getConnectedInputNodes() {
+        const result = [];
+        for (let inputSlot = 0; inputSlot < this.inputs.length; inputSlot++) {
+            const link = this.getInputLink(inputSlot);
+            if (link) {
+                const originNode = app.graph.getNodeById(link.origin_id);
+                const data = {
+                    node: originNode,
+                    srcSlot: link.origin_slot,
+                    dstSlot: inputSlot,
+                };
+                result.push(data);
+            }
+        }
+        return result;
     }
 }

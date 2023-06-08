@@ -2,7 +2,15 @@ import yaml
 import shutil
 import json
 import os
-from .folder_paths import ext_path, default_nested_nodes_path, config_path, js_extensions_repo_path
+import sys
+
+try:
+    dir_path = os.path.dirname(os.path.abspath(__file__))
+    sys.path.append(dir_path)
+    from directory_paths import ext_path, default_nested_nodes_path, config_path, js_extensions_repo_path
+except ImportError as e:
+    print(f"[NestedNodeBuilder] Error importing directory_paths.py: {e}")
+
 
 # Config keys
 config_nested_nodes_path = "nested_nodes_path"

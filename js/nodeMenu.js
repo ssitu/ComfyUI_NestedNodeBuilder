@@ -6,20 +6,25 @@ export const ext = {
     name: "SS.NestedNodeBuilder", defs: {}, nestedDef: {}, nestedNodeDefs: {},
 
     async setup(app) {
-		const originalQueuePrompt = app.queuePrompt;
+        const originalQueuePrompt = app.queuePrompt;
         app.queuePrompt = async function (number, batchsize) {
             const nestedNodesUnnested = {};
+            const nestedNodes = [];
+            const connectedInputNodes = [];
             // Unnest all nested nodes
             const nodes = app.graph._nodes;
             for (const i in nodes) {
                 const node = nodes[i];
                 if (node.properties.serializedWorkflow) {
                     node.beforeQueuePrompt();
+                    nestedNodes.push(node);
+                    connectedInputNodes.push(node.getConnectedInputNodes());
                     // Unnest the nested node
                     const unnestedNodes = node.unnest();
                     nestedNodesUnnested[node.type] = unnestedNodes;
                 }
             }
+
             // Call the original function
             try {
                 await originalQueuePrompt.call(this, number, batchsize);
@@ -27,15 +32,43 @@ export const ext = {
             catch (error) {
                 console.log("Error in queuePrompt:", error);
             }
+
             // Renest all nested nodes
+            let i = 0;
             for (const nestedType in nestedNodesUnnested) {
                 const unnestedNodes = nestedNodesUnnested[nestedType];
-                const node = LiteGraph.createNode(nestedType);
+                const node = nestedNodes[i];
                 app.graph.add(node);
                 node.nestWorkflow(unnestedNodes);
+
+                // Reconnect missing links
+                const inputNodes = connectedInputNodes[i];
+                const currentConnectedInputNodes = node.getConnectedInputNodes();
+                console.log("inputNodes", inputNodes);
+                console.log("currentConnectedInputNodes", currentConnectedInputNodes);
+                let currentIdx = 0;
+                for (const inputIdx in inputNodes) {
+                    const inputData = inputNodes[inputIdx];
+                    const currentInputData = currentConnectedInputNodes[currentIdx];
+                    console.log(inputIdx, currentIdx)
+                    if (inputData.node.id === currentInputData?.node.id) {
+                        // Increment the current index
+                        currentIdx++;
+                        continue;
+                    } // Otherwise, the link is missing
+                    // Reconnect the link
+                    const srcSlot = inputData.srcSlot;
+                    const dstSlot = inputData.dstSlot;
+                    inputData.node.connect(srcSlot, node, dstSlot);
+                }
+
+                i++;
             }
+
+            // Add back links that were not reconnected due to special behavior (primitive nodes)
+
         }
-	},
+    },
 
     /**
      * Called before the app registers nodes from definitions.
@@ -258,7 +291,7 @@ export const ext = {
                 }, (error) => {
                     console.log("Error registering nodes:", error);
                 });
-            }, 
+            },
             (error) => {
                 app.ui.dialog.show(`Was unable to save the nested node. Check the console for more details.`);
             }
@@ -344,6 +377,7 @@ export function mapLinksToNodes(serializedWorkflow) {
 function inheritInputs(node, nodeDef, nestedDef, linkMapping) {
     // For each input from nodeDef, add it to the nestedDef if the input is connected
     // to a node outside the serialized workflow
+    console.log(node, nodeDef, nestedDef, linkMapping)
     for (const inputType in nodeDef.input) { // inputType is required, optional, etc.
         // Add the input type if it doesn't exist
         if (!(inputType in nestedDef.input)) {
