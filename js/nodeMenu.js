@@ -14,6 +14,8 @@ export const ext = {
             for (const i in nodes) {
                 const node = nodes[i];
                 if (node.properties.serializedWorkflow) {
+                    node.beforeQueuePrompt();
+                    // Unnest the nested node
                     const unnestedNodes = node.unnest();
                     nestedNodesUnnested[node.type] = unnestedNodes;
                 }

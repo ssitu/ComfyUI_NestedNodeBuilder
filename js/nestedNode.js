@@ -238,6 +238,10 @@ export class NestedNode {
         console.log("[NestedNodeBuilder] Widget changed", name, value, old_value, widget);
     }
 
+    beforeQueuePrompt() {
+        this.updateSerializedWorkflow()
+    }
+
     unnest() {
         const serializedWorkflow = this.properties.serializedWorkflow;
         const linksMapping = mapLinksToNodes(serializedWorkflow);
