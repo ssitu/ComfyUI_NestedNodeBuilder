@@ -38,19 +38,20 @@ export const ext = {
             for (const nestedType in nestedNodesUnnested) {
                 const unnestedNodes = nestedNodesUnnested[nestedType];
                 const node = nestedNodes[i];
+
+                // Readd the node to the graph
                 app.graph.add(node);
+
+                // Renest the node using the unnested nodes
                 node.nestWorkflow(unnestedNodes);
 
                 // Reconnect missing links
                 const inputNodes = connectedInputNodes[i];
                 const currentConnectedInputNodes = node.getConnectedInputNodes();
-                console.log("inputNodes", inputNodes);
-                console.log("currentConnectedInputNodes", currentConnectedInputNodes);
                 let currentIdx = 0;
                 for (const inputIdx in inputNodes) {
                     const inputData = inputNodes[inputIdx];
                     const currentInputData = currentConnectedInputNodes[currentIdx];
-                    console.log(inputIdx, currentIdx)
                     if (inputData.node.id === currentInputData?.node.id) {
                         // Increment the current index
                         currentIdx++;
@@ -61,7 +62,18 @@ export const ext = {
                     const dstSlot = inputData.dstSlot;
                     inputData.node.connect(srcSlot, node, dstSlot);
                 }
+                
+                // Readd widget elements to the canvas
+                for (const widget of node.widgets ?? []) {
+                    if (widget.inputEl) {
+                        document.body.appendChild(widget.inputEl);
+                    }
+                }
 
+                // Call resize listeners to fix overhanging widgets
+	            node.setSize(node.size);
+
+                // Increment the index
                 i++;
             }
 
