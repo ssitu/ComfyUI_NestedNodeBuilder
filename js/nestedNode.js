@@ -312,7 +312,7 @@ export class NestedNode {
             const node = nestedNodes[i];
             for (let inputSlot = 0; inputSlot < (node.inputs ?? []).length; inputSlot++) {
                 // Out of bounds, rest of the inputs are not connected to the outside
-                if (nestedInputSlot >= this.inputs.length) {
+                if (nestedInputSlot >= (this.inputs ?? []).length) {
                     break;
                 }
                 // If types don't match, then skip this input
@@ -332,7 +332,7 @@ export class NestedNode {
             }
             for (let outputSlot = 0; outputSlot < (node.outputs ?? []).length; outputSlot++) {
                 // Out of bounds, rest of the outputs are not connected to the outside
-                if (nestedOutputSlot >= this.outputs.length) {
+                if (nestedOutputSlot >= (this.outputs ?? []).length) {
                     break;
                 }
                 // If types don't match, then skip this output
