@@ -26,7 +26,7 @@ Nested nodes are saved and can be created again from the node menu that appears 
 You can find them under `ComfyUI/custom_nodes/ComfyUI_NestedNodeBuilder/nested_nodes/`. This directory can be changed by editing the `nested_nodes_path` entry in the `config.yaml`. The nested nodes are stored as .json files. The names of the nested nodes may be changed by editing their .json files. The changes made to the directory are registered after refreshing the web UI. 
 
 ## How it works
-The nodes that are nested are stored in the properties of the nested node. Before the prompt is calculated, the nested node is replaced with the nodes that it stored. After the prompt is calculated, the nested nodes are replaced with the nested node. This seemed to be the approach that was the least intrusive on the ComfyUI codebase.
+The nodes that are nested are stored in the properties of the nested node. Before the prompt is calculated, the nested node is replaced with the nodes that it stored. After the prompt is calculated, the nodes are nested again. This seemed to be the approach that was the least intrusive on the ComfyUI codebase.
 
 ## Problems
 - Special nodes such as primitive and reroute nodes cannot be nested.
