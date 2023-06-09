@@ -12,6 +12,9 @@ git clone https://github.com/ssitu/ComfyUI_ComfyUI_NestedNodeBuilder
 
 ## Usage
 
+### Demo:
+![NestedNodeBuilderDemo](https://github.com/ssitu/ComfyUI_NestedNodeBuilder/assets/57548627/1ac81eda-b7bd-41ab-9cde-54eae7bb22dc)
+
 ### Selecting the nodes to nest
 Select multiple nodes by using `Ctrl/Shift + left/right click` on the desired nodes to nest. 
 You can also use `Ctrl + left click + drag` to highlight nodes.
