@@ -218,7 +218,7 @@ export class NestedNode {
             console.log("[NestedNodeBuilder] Serialized workflow changed", structuredClone(value));
             this.inheritWidgetValues();
         }
-        console.log("[NestedNodeBuilder] Property changed", name, value);
+        // console.log("[NestedNodeBuilder] Property changed", name, value);
     }
 
     updateSerializedWorkflow() {
@@ -236,7 +236,7 @@ export class NestedNode {
 
     onWidgetChanged(name, value, old_value, widget) {
         this.updateSerializedWorkflow();
-        console.log("[NestedNodeBuilder] Widget changed", name, value, old_value, widget);
+        // console.log("[NestedNodeBuilder] Widget changed", name, value, old_value, widget);
     }
 
     beforeQueuePrompt() {

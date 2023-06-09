@@ -173,6 +173,7 @@ export const ext = {
         // When the nested node is loaded but missing def, it can still work.
         // Might remove this in the future.
         //
+        console.log("[NestedNodeBuilder] def for nested node not found, adding temporary def:", nestedDef);
 
         // Add the def
         this.nestedNodeDefs[nestedDef.name] = nestedDef;
@@ -389,7 +390,6 @@ export function mapLinksToNodes(serializedWorkflow) {
 function inheritInputs(node, nodeDef, nestedDef, linkMapping) {
     // For each input from nodeDef, add it to the nestedDef if the input is connected
     // to a node outside the serialized workflow
-    console.log(node, nodeDef, nestedDef, linkMapping)
     for (const inputType in nodeDef.input) { // inputType is required, optional, etc.
         // Add the input type if it doesn't exist
         if (!(inputType in nestedDef.input)) {
@@ -433,7 +433,6 @@ function inheritInputs(node, nodeDef, nestedDef, linkMapping) {
 }
 
 export function isInputInternal(node, inputIdx, linkMapping) {
-    console.log("isInputInternal", node, inputIdx, linkMapping);
     // Keep input if no link
     const link = node.inputs[inputIdx].link;
     if (link === null) {
