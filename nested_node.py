@@ -1,3 +1,5 @@
+# Not used, maybe in the future
+
 import nodes
 
 def createNestedNodeClass(node_def):
@@ -10,7 +12,7 @@ def createNestedNodeClass(node_def):
         return node_def["inputs"]
 
     # Entry point
-    nested_workflow = node_def["description"]
+    nested_workflow = node_def["description"]["nestedNodes"]
     def execute_nested_node(self, **kwargs):
         for node in self.nested_workflow:
             nodes.NODE_CLASS_MAPPINGS[node["type"]].execute(node, **kwargs)

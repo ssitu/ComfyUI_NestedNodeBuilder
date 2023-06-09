@@ -43,7 +43,7 @@ git clone https://github.com/ssitu/ComfyUI_ComfyUI_NestedNodeBuilder
 - Nesting two nodes that have a "control_after_generate" widget will cause the resulting node to keep only one of the widgets, and also corrupts the values of widgets that follow it.
 - The green outline that indicates which node is being executed is not shown for nested nodes.
 - Nested nodes cannot be nested.
-- Nesting output nodes such as preview image does not work.
+- Can nesting output nodes such as preview image and save image nodes, but it won't display the image. You can still see the image if loading the prompt from the history.
 
 ## Credits
 Inspired by [this repo by Itdrdata](https://github.com/ltdrdata/ComfyUI-Workflow-Component), check it out if you want something with more customization.

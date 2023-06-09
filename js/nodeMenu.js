@@ -15,7 +15,7 @@ export const ext = {
             const nodes = app.graph._nodes;
             for (const i in nodes) {
                 const node = nodes[i];
-                if (node.properties.serializedWorkflow) {
+                if (node.properties.nestedData) {
                     node.beforeQueuePrompt();
                     nestedNodes.push(node);
                     connectedInputNodes.push(node.getConnectedInputNodes());
@@ -146,7 +146,7 @@ export const ext = {
      */
     loadedGraphNode(node, app) {
         // Return if the node is not a nested node
-        if (!node.properties.serializedWorkflow) {
+        if (!node.properties.nestedData) {
             return;
         }
 
@@ -156,7 +156,7 @@ export const ext = {
         }
 
         // Use the serialized workflow to create a nested node definition
-        const nestedDef = this.createNestedDef(node.properties.serializedWorkflow, node.type);
+        const nestedDef = this.createNestedDef(node.properties.nestedData.nestedNodes, node.type);
         console.log("[NestedNodeBuilder] loaded graph node, generated def", nestedDef);
 
         //
@@ -219,7 +219,9 @@ export const ext = {
             name: uniqueType,
             display_name: uniqueName,
             category: "Nested Nodes",
-            description: serializedWorkflow,
+            description: {
+                nestedNodes: serializedWorkflow
+            },
             input: {},
             output: [],
             output_is_list: [],
