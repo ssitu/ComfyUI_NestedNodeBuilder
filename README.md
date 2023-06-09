@@ -13,7 +13,7 @@ git clone https://github.com/ssitu/ComfyUI_ComfyUI_NestedNodeBuilder
 ## Usage
 
 ### Demo:
-![NestedNodeBuilderDemo](https://github.com/ssitu/ComfyUI_NestedNodeBuilder/assets/57548627/d7007cc2-01bf-48c5-a89a-6f894ea05937)
+![NestedNodeBuilderDemo](https://github.com/ssitu/ComfyUI_NestedNodeBuilder/assets/57548627/f88fc1dc-ec64-4a48-b989-2857de088b67)
 
 <details>
   <summary><h3>1. Selecting the nodes to nest</h3></summary>
