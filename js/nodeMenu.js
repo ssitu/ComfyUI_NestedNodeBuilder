@@ -136,7 +136,15 @@ export const ext = {
             nodeType.prototype[key] = nestedNodePrototype[key];
         }
 
-        console.log("[NestedNodeBuilder] Added nested node methods:", nodeType.prototype);
+        // Add the nested node data to the node properties
+        const onNodeCreated = nodeType.prototype.onNodeCreated;
+        nodeType.prototype.onNodeCreated = function () {
+            const result = onNodeCreated ? onNodeCreated.apply(this, arguments) : undefined;
+            if (!this.properties || !("nestedData" in this.properties)) {
+                this.addProperty("nestedData", nodeData.description, "object");
+            }
+            return result;
+        }
     },
 
     /**
