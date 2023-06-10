@@ -215,7 +215,18 @@ export const ext = {
                 }
             });
 
-            // Add a separator
+            // Nested Node specific options
+            if (this.properties.nestedData) {
+
+                // Add a menu option to unnest the node
+                options.push({
+                    content: "Unnest", callback: () => {
+                        this.unnest();
+                    }
+                });
+            }
+
+            // End with a separator
             options.push(null);
         };
     },
