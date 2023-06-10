@@ -1,5 +1,5 @@
 # ComfyUI_NestedNodeBuilder
-Adds a feature that allows for nesting of other nodes for better organization and simplification of repetitive patterns in workflows.
+Adds a feature for the default interface in [ComfyUI](https://github.com/comfyanonymous/ComfyUI) that allows for nesting of other nodes for better organization and simplification of repetitive patterns in workflows.
 
 ## Disclaimer
 This is a prototype and will likely have many problems. This will probably be obsolete once [subgraphs](https://github.com/comfyanonymous/ComfyUI/pull/724) are implemented within ComfyUI. If you do decide to use this, make sure to save your workflow before nesting any nodes just in case. The way nested nodes are saved are subject to change and may become unusable in later commits.
