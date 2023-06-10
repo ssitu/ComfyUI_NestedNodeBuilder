@@ -7,7 +7,7 @@ This is a prototype and will likely have many problems. This will probably be ob
 ## Installation
 Enter the following command from the commandline starting in ComfyUI/custom_nodes/
 ```
-git clone https://github.com/ssitu/ComfyUI_ComfyUI_NestedNodeBuilder
+git clone https://github.com/ssitu/ComfyUI_NestedNodeBuilder
 ```
 
 ## Usage
