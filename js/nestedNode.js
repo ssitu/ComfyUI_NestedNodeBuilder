@@ -360,6 +360,11 @@ export class NestedNode {
         // Remove the nested node
         app.graph.remove(graph.getNodeById(this.id));
 
+        // Add the nodes to selection
+        for (const node of nestedNodes) {
+            app.canvas.selectNode(node, true);
+        }
+
         return nestedNodes;
     }
 
