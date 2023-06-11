@@ -80,8 +80,8 @@ def save_nested_def(node_def):
     file_name = node_def["name"] + ".json"
     file_path = os.path.join(nested_nodes_path, file_name)
     # Raise error if file already exists
-    if os.path.exists(file_path):
-        raise FileExistsError(f"[NestedNodeBuilder] {file_name} already exists.")
+    # if os.path.exists(file_path):
+    #     raise FileExistsError(f"[NestedNodeBuilder] {file_name} already exists.")
     with open(file_path, 'w') as json_file:
         json.dump(node_def, json_file, indent=4)
 

@@ -1,9 +1,10 @@
 import { app } from "../../scripts/app.js";
 import { NestedNode, serializeWorkflow } from "./nestedNode.js";
-import { $el } from "../../scripts/ui.js";
+import { ComfirmDialog } from "./dialog.js";
 
 export const ext = {
     name: "SS.NestedNodeBuilder", defs: {}, nestedDef: {}, nestedNodeDefs: {},
+    comfirmationDialog: new ComfirmDialog(),
 
     async setup(app) {
         const originalQueuePrompt = app.queuePrompt;
@@ -62,7 +63,7 @@ export const ext = {
                     const dstSlot = inputData.dstSlot;
                     inputData.node.connect(srcSlot, node, dstSlot);
                 }
-                
+
                 // Readd widget elements to the canvas
                 for (const widget of node.widgets ?? []) {
                     if (widget.inputEl) {
@@ -71,7 +72,7 @@ export const ext = {
                 }
 
                 // Call resize listeners to fix overhanging widgets
-	            node.setSize(node.size);
+                node.setSize(node.size);
 
                 // Increment the index
                 i++;
@@ -224,6 +225,7 @@ export const ext = {
                         this.unnest();
                     }
                 });
+
             }
 
             // End with a separator
@@ -271,8 +273,18 @@ export const ext = {
             // Check if the name already exists in the defs
             const name = input.value;
             if (name in this.nestedNodeDefs) {
-                app.ui.dialog.show(`The name "${name}" is already used for a nested node. Please choose a different name.`);
-                return;
+                // app.ui.dialog.show(`The name "${name}" is already used for a nested node. Please choose a different name.`);
+                this.comfirmationDialog.show(
+                    `The name "${name}" is already used for a nested node. Do you want to overwrite it?`,
+                    () => {
+                        // Overwrite the nested node
+                        this.nestSelectedNodes(selectedNodes, name);
+                    },
+                    () => {
+                        // Do not overwrite the nested node
+                        return;
+                    }
+                );
             } else {
                 // Successfully entered a valid name
                 this.nestSelectedNodes(selectedNodes, name);
