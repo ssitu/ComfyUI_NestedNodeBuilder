@@ -216,6 +216,20 @@ export const ext = {
                 }
             });
 
+            // Add a menu option to nest the selected nodes if there is a nested node definition with the same structure
+            const selectedNodes = app.canvas.selected_nodes;
+            const serializedWorkflow = serializeWorkflow(selectedNodes);
+            for (const defName in ext.nestedNodeDefs) {
+                const def = ext.nestedNodeDefs[defName];
+                if (isStructurallyEqual(def.description.nestedNodes, serializedWorkflow)) {
+                    options.push({
+                        content: `Convert selected to Nested Node: ${defName}`, callback: () => {
+                            ext.nestSelectedNodes(selectedNodes, defName);
+                        }
+                    });
+                }
+            }
+
             // Nested Node specific options
             if (this.properties.nestedData) {
 
@@ -515,3 +529,96 @@ function inheritOutputs(node, nodeDef, nestedDef, linksMapping) {
         nestedDef.output_is_list.push(defOutputIsList);
     }
 }
+
+export function isStructurallyEqual(nestedWorkflow1, nestedWorkflow2) {
+    // Number of nodes must be the equal
+    if (nestedWorkflow1.length !== nestedWorkflow2.length) {
+        return false;
+    }
+    // Workflow is structurally equal if the numbers of each type of node is equal
+    // and they are linked in the same way.
+
+    // Number of each type of node must be equal
+    const nodeTypeCount1 = {};
+    const nodeTypeCount2 = {};
+    for (const i in nestedWorkflow1) {
+        const node1 = nestedWorkflow1[i];
+        if (nodeTypeCount1[node1.type] === undefined) {
+            nodeTypeCount1[node1.type] = 0;
+        }
+        nodeTypeCount1[node1.type]++;
+
+        const node2 = nestedWorkflow2[i];
+        if (nodeTypeCount2[node2.type] === undefined) {
+            nodeTypeCount2[node2.type] = 0;
+        }
+        nodeTypeCount2[node2.type]++;
+    }
+    // Verify counts
+    for (const type in nodeTypeCount1) {
+        if (nodeTypeCount1[type] !== nodeTypeCount2[type]) {
+            return false;
+        }
+    }
+
+    // Check if the links are the same
+    const linksMapping1 = mapLinksToNodes(nestedWorkflow1);
+    const linksMapping2 = mapLinksToNodes(nestedWorkflow2);
+
+    // Remove links that are not within the nested workflow
+    for (const link in linksMapping1) {
+        const entry = linksMapping1[link];
+        if (entry.srcId === undefined || entry.dstId === undefined) {
+            delete linksMapping1[link];
+        }
+    }
+    for (const link in linksMapping2) {
+        const entry = linksMapping2[link];
+        if (entry.srcId === undefined || entry.dstId === undefined) {
+            delete linksMapping2[link];
+        }
+    }
+
+    // Get a mapping of ids to types
+    const idToType1 = {};
+    const idToType2 = {};
+    for (const i in nestedWorkflow1) {
+        const node1 = nestedWorkflow1[i];
+        idToType1[node1.id] = node1.type;
+        const node2 = nestedWorkflow2[i];
+        idToType2[node2.id] = node2.type;
+    }
+
+    // Replace the ids with the type
+    for (const link in linksMapping1) {
+        const entry = linksMapping1[link];
+        entry.srcId = idToType1[entry.srcId];
+        entry.dstId = idToType1[entry.dstId];
+    }
+    for (const link in linksMapping2) {
+        const entry = linksMapping2[link];
+        entry.srcId = idToType2[entry.srcId];
+        entry.dstId = idToType2[entry.dstId];
+    }
+
+    // Check if the links are the same
+    for (const link1 in linksMapping1) {
+        // Iterate over the links in the 2nd mapping and find a match
+        let foundMatch = false;
+        for (const link2 in linksMapping2) {
+            const entry1 = linksMapping1[link1];
+            const entry2 = linksMapping2[link2];
+            if (entry1.srcId === entry2.srcId && entry1.dstId === entry2.dstId) {
+                // Found a match, remove the entry from the 2nd mapping
+                delete linksMapping2[link2];
+                foundMatch = true;
+                break;
+            }
+        }
+        if (!foundMatch) {
+            return false;
+        }
+    }
+    return true;
+}
+
