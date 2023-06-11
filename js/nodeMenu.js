@@ -77,9 +77,6 @@ export const ext = {
                 // Increment the index
                 i++;
             }
-
-            // Add back links that were not reconnected due to special behavior (primitive nodes)
-
         }
     },
 
@@ -100,13 +97,6 @@ export const ext = {
         Object.assign(this.nestedNodeDefs, nestedNodeDefs);
         // Add nested node definitions if they exist
         Object.assign(defs, this.nestedNodeDefs);
-        console.log("[NestedNodeBuilder] Added nested node definitions:", defs);
-
-        // Add nested node definitions through the server
-        // const resp = await fetch("/nested_node_defs");
-        // if (resp.status !== 200) {
-        //     console.log("[NestedNodeBuilder] Error getting nested node definitions:", resp);
-        // }
     },
 
     /**
@@ -129,7 +119,6 @@ export const ext = {
         if (!isNestedNode) {
             return;
         }
-
 
         // Add Nested Node methods to the node ComfyNode
         const nestedNodePrototype = NestedNode.prototype;
@@ -166,7 +155,6 @@ export const ext = {
 
         // Use the serialized workflow to create a nested node definition
         const nestedDef = this.createNestedDef(node.properties.nestedData.nestedNodes, node.type);
-        console.log("[NestedNodeBuilder] loaded graph node, generated def", nestedDef);
 
         //
         // If the definition already exists, then the node will be loaded with the existing definition
@@ -232,14 +220,12 @@ export const ext = {
 
             // Nested Node specific options
             if (this.properties.nestedData) {
-
                 // Add a menu option to unnest the node
                 options.push({
                     content: "Unnest", callback: () => {
                         this.unnest();
                     }
                 });
-
             }
 
             // End with a separator
@@ -287,7 +273,6 @@ export const ext = {
             // Check if the name already exists in the defs
             const name = input.value;
             if (name in this.nestedNodeDefs) {
-                // app.ui.dialog.show(`The name "${name}" is already used for a nested node. Please choose a different name.`);
                 this.comfirmationDialog.show(
                     `The name "${name}" is already used for a nested node. Do you want to overwrite it?`,
                     () => {
@@ -368,19 +353,6 @@ export const ext = {
 app.registerExtension(ext);
 
 async function saveDef(nestedDef) {
-    // // Save by downloading through browser
-    // const json = JSON.stringify(nestedDef, null, 2); // convert the data to a JSON string
-    // const blob = new Blob([json], { type: "application/json" });
-    // const url = URL.createObjectURL(blob);
-    // const a = $el("a", {
-    //     href: url, download: nestedDef.name, style: { display: "none" }, parent: document.body,
-    // });
-    // a.click();
-    // setTimeout(function () {
-    //     a.remove();
-    //     window.URL.revokeObjectURL(url);
-    // }, 0);
-
     // Save by sending to server
     const request = {
         method: "POST",
@@ -457,18 +429,6 @@ function inheritInputs(node, nodeDef, nestedDef, linkMapping) {
                 nestedDef.input[inputType][uniqueInputName] = nodeDef.input[inputType][inputName];
                 continue;
             }
-            // // If the input is connected to a node within the serialized workflow,
-            // // then don't add it as an input.
-            // const link = node.inputs[linkInputIdx].link;
-            // const entry = linkMapping[link];
-            // if (link !== null && nodesIdArr.includes(entry.srcId)) {
-            //     // This input is either not connected or
-            //     // connected to a node within the serialized workflow
-            //     // Do not add it as an input
-            // } else {
-            //     // Else, input not linked or linked to an outside node, so inherit the input
-            //     nestedDef.input[inputType][uniqueInputName] = nodeDef.input[inputType][inputName];
-            // }
 
             // Add the input if it is not connected to a node within the serialized workflow
             if (!isInputInternal(node, linkInputIdx, linkMapping)) {

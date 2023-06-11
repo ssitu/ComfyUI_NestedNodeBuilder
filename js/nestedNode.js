@@ -62,7 +62,6 @@ export class NestedNode {
 
     nestedNodeSetup() {
         if (!this.isSetup) {
-            console.log("[NestedNodeBuilder] Nested node setup");
             this.addWidgetListeners();
             this.isSetup = true;
         }
@@ -135,7 +134,6 @@ export class NestedNode {
     inheritLinks() {
         const serialized = this.properties.nestedData.nestedNodes;
         const linksMapping = mapLinksToNodes(serialized);
-        console.log("[NestedNodeBuilder] Links mapping", linksMapping);
         for (const linkId in linksMapping) {
             const entry = linksMapping[linkId];
             if (entry.srcId && entry.dstId) { // Link between nodes within the nested workflow
@@ -192,18 +190,6 @@ export class NestedNode {
             }
             let numNonInternalOutputs = 0;
             for (const j in node.outputs) {
-                // const output = node.outputs[j];
-                // if (!output.links || output.links.length === 0) {
-                //     numNonInternalOutputs++;
-                //     continue;
-                // }
-                // for (const link of output.links) {
-                //     const entry = linksMapping[link];
-                //     if (!(entry.srcId && entry.dstId)) {
-                //         numNonInternalOutputs++;
-                //         break;
-                //     }
-                // }
                 if (!isOutputInternal(node, j, linksMapping)) {
                     numNonInternalOutputs++;
                 }
@@ -216,10 +202,8 @@ export class NestedNode {
     // Update node on property change
     onPropertyChanged(name, value) {
         if (name === "serializedWorkflow") {
-            console.log("[NestedNodeBuilder] Serialized workflow changed", structuredClone(value));
             this.inheritWidgetValues();
         }
-        // console.log("[NestedNodeBuilder] Property changed", name, value);
     }
 
     updateSerializedWorkflow() {
@@ -237,7 +221,6 @@ export class NestedNode {
 
     onWidgetChanged(name, value, old_value, widget) {
         this.updateSerializedWorkflow();
-        // console.log("[NestedNodeBuilder] Widget changed", name, value, old_value, widget);
     }
 
     beforeQueuePrompt() {
@@ -297,7 +280,6 @@ export class NestedNode {
         for (const link in linksMapping) {
             const entry = linksMapping[link];
             if (entry && entry.srcId && entry.dstId) {
-                // app.graph.getNodeById(entry.srcId).connect(entry.srcSlot, app.graph.getNodeById(entry.dstId), entry.dstSlot);
                 const src = serializedToNodeMapping[entry.srcId];
                 const dst = serializedToNodeMapping[entry.dstId];
                 src.connect(entry.srcSlot, dst, entry.dstSlot);
@@ -320,10 +302,6 @@ export class NestedNode {
                 if (node.inputs[inputSlot].type !== this.inputs[nestedInputSlot].type) {
                     continue;
                 }
-                // nestedInputSlot = this.getNestedInputSlot(node.id, inputSlot);
-                // if (nestedInputSlot === null) {
-                //     continue;
-                // }
                 const link = this.getInputLink(nestedInputSlot);
                 if (link) { // Just in case
                     const originNode = app.graph.getNodeById(link.origin_id);
