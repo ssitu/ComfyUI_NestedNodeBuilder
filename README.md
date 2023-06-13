@@ -2,7 +2,7 @@
 Adds a feature for the default interface in [ComfyUI](https://github.com/comfyanonymous/ComfyUI) that allows for nesting of other nodes for better organization and simplification of repetitive patterns in workflows.
 
 ## Disclaimer
-This is a prototype and will likely have many problems. This will probably be obsolete once [subgraphs](https://github.com/comfyanonymous/ComfyUI/pull/724) are implemented within ComfyUI. If you do decide to use this, make sure to save your workflow before nesting any nodes just in case. The way nested nodes are saved are subject to change and may become unusable in later commits.
+This is a prototype and will likely have many problems. This will probably be obsolete once [subgraphs](https://github.com/comfyanonymous/ComfyUI/pull/724) are implemented within ComfyUI. To be safe, save your workflow before nesting any nodes. How nested nodes are saved are subject to change and saved nodes may become unusable in the future.
 
 ## Installation
 Enter the following command from the commandline starting in ComfyUI/custom_nodes/
@@ -22,7 +22,7 @@ git clone https://github.com/ssitu/ComfyUI_NestedNodeBuilder
 </details>
 <details>
   <summary><h3>2. Nesting the selected nodes</h3></summary>
-  Once the nodes are selected, <code>right click</code> on any of the selected nodes and select <code>Nest Selected Nodes</code> and choose a name that won't conflict with any other existing node. The selected nodes will be replaced with a new node that contains the selected nodes.
+  After making a selection, <code>right click</code> on any of the selected nodes and select <code>Nest Selected Nodes</code> and choose a name that won't conflict with any other existing node. The selected nodes will be replaced with a new node that contains the selected nodes. You can also unnest the new node by right clicking on the node and clicking <code>Unnest</code>. The selected nodes may also be converted to an already existing nested node using the <code>Convert selected to Nested Node: &ltname&gt</code> option that appears if the selected nodes have a similar structure.
 </details>
 <details>
     <summary><h3>3. Creating a nested node from the node menu</h3></summary>
@@ -41,9 +41,8 @@ git clone https://github.com/ssitu/ComfyUI_NestedNodeBuilder
 ## Problems
 - Special nodes such as primitive and reroute nodes cannot be nested.
 - Nesting two nodes that have a "control_after_generate" widget will cause the resulting node to keep only one of the widgets, and also corrupts the values of widgets that follow it.
-- The green outline that indicates which node is being executed is not shown for nested nodes.
 - Nested nodes cannot be nested.
-- Can nesting output nodes such as preview image and save image nodes, but it won't display the image. You can still see the image if loading the prompt from the history.
+- Can't really nest output nodes such as preview image and save image nodes. It works but it won't display the image. You can still see the image if loading the prompt from the history.
 
 ## Credits
-Inspired by [this repo by Itdrdata](https://github.com/ltdrdata/ComfyUI-Workflow-Component), check it out if you want something with more customization.
+Inspired by [this repo by Itdrdata](https://github.com/ltdrdata/ComfyUI-Workflow-Component), check it out if you want something more robust and flexible.
