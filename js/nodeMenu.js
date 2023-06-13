@@ -1,12 +1,19 @@
 import { app } from "../../scripts/app.js";
+import { api } from "../../scripts/api.js";
 import { NestedNode, serializeWorkflow } from "./nestedNode.js";
 import { ComfirmDialog } from "./dialog.js";
+import { Queue } from "./queue.js";
 
 export const ext = {
-    name: "SS.NestedNodeBuilder", defs: {}, nestedDef: {}, nestedNodeDefs: {},
+    name: "SS.NestedNodeBuilder",
+    defs: {},
+    nestedDef: {},
+    nestedNodeDefs: {},
     comfirmationDialog: new ComfirmDialog(),
+    nestedPromptQueue: new Queue([null]),
 
     async setup(app) {
+        // Extend queuePrompt behavior
         const originalQueuePrompt = app.queuePrompt;
         app.queuePrompt = async function (number, batchsize) {
             const nestedNodesUnnested = {};
@@ -22,7 +29,7 @@ export const ext = {
                     connectedInputNodes.push(node.getConnectedInputNodes());
                     // Unnest the nested node
                     const unnestedNodes = node.unnest();
-                    nestedNodesUnnested[node.type] = unnestedNodes;
+                    nestedNodesUnnested[node.id] = unnestedNodes;
                 }
             }
 
@@ -36,8 +43,8 @@ export const ext = {
 
             // Renest all nested nodes
             let i = 0;
-            for (const nestedType in nestedNodesUnnested) {
-                const unnestedNodes = nestedNodesUnnested[nestedType];
+            for (const nestedId in nestedNodesUnnested) {
+                const unnestedNodes = nestedNodesUnnested[nestedId];
                 const node = nestedNodes[i];
 
                 // Readd the node to the graph
@@ -77,7 +84,35 @@ export const ext = {
                 // Increment the index
                 i++;
             }
+
+            //
+            // Add the pre-unnested workflow to the queue
+            //
+            // Create a mapping of unnested node ids to the encapsulating nested node id
+            const unnestedToNestedIds = {};
+            for (const nestedId in nestedNodesUnnested) {
+                const unnestedNodes = nestedNodesUnnested[nestedId];
+                for (const unnestedNode of unnestedNodes) {
+                    unnestedToNestedIds[unnestedNode.id] = nestedId;
+                }
+            }
+            // Add the mapping to the queue
+            ext.nestedPromptQueue.enqueue(unnestedToNestedIds);
         }
+
+        // Redirect the executing event to the nested node if the executing node is nested
+        api.addEventListener("executing", ({ detail }) => {
+            const unnestedToNestedIds = ext.nestedPromptQueue.peek();
+            if (detail in unnestedToNestedIds) {
+                app.runningNodeId = unnestedToNestedIds[detail];
+            }
+        });
+
+        // Remove the last prompt from the queue
+        api.addEventListener("execution_start", ({ detail }) => {
+            this.nestedPromptQueue.dequeue();
+        });
+
     },
 
     /**
@@ -97,6 +132,8 @@ export const ext = {
         Object.assign(this.nestedNodeDefs, nestedNodeDefs);
         // Add nested node definitions if they exist
         Object.assign(defs, this.nestedNodeDefs);
+
+
     },
 
     /**
@@ -470,7 +507,6 @@ export function isOutputInternal(node, outputIdx, linkMapping) {
     }
     return true;
 }
-
 
 function inheritOutputs(node, nodeDef, nestedDef, linksMapping) {
     // Somewhat similar to inheritInputs.
