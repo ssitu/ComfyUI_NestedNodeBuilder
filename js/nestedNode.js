@@ -109,10 +109,43 @@ export class NestedNode {
         let widgetIdx = 0;
         for (const i in serialized) {
             const node = serialized[i];
+            // Create a temporary node to get access to widgets that are not 
+            // included in its node definition (e.g. control_after_generate)
+            const tempNode = LiteGraph.createNode(node.type);
             for (const j in node.widgets_values) {
+                // Must skip widgets that were unable to be added to the nested node
+                const thisWidget = this.widgets?.[widgetIdx];
+                const tempWidget = tempNode?.widgets?.[j];
+                // Remove trailing numbers from the name
+                const thisWidgetName = thisWidget?.name.replace(/\d+$/, '');;
+                if (thisWidgetName !== tempWidget?.name) {
+                    continue;
+                }
                 const widget_value = node.widgets_values[j];
                 this.widgets_values.push(widget_value);
                 this.widgets[widgetIdx].value = widget_value;
+                widgetIdx++;
+            }
+        }
+    }
+
+    updateSerializedWorkflow() {
+        // Update the serialized workflow with the current values of the widgets
+        const serialized = this.properties.nestedData.nestedNodes;
+        let widgetIdx = 0;
+        for (const i in serialized) {
+            const node = serialized[i];
+            const tempNode = LiteGraph.createNode(node.type);
+            for (const j in node.widgets_values) {
+
+                const thisWidget = this.widgets?.[widgetIdx];
+                const tempWidget = tempNode?.widgets?.[j];
+                const thisWidgetName = thisWidget?.name.replace(/\d+$/, '');;
+                if (thisWidgetName !== tempWidget?.name) {
+                    continue;
+                }
+
+                node.widgets_values[j] = thisWidget.value;
                 widgetIdx++;
             }
         }
@@ -127,6 +160,21 @@ export class NestedNode {
                 });
             }
         }
+    }
+
+    // Update node on property change
+    onPropertyChanged(name, value) {
+        if (name === "serializedWorkflow") {
+            this.inheritWidgetValues();
+        }
+    }
+
+    onWidgetChanged(name, value, old_value, widget) {
+        this.updateSerializedWorkflow();
+    }
+
+    beforeQueuePrompt() {
+        this.updateSerializedWorkflow()
     }
 
     // Inherit the links of its serialized workflow, 
@@ -197,34 +245,6 @@ export class NestedNode {
             slotIdx += numNonInternalOutputs;
         }
         return null;
-    }
-
-    // Update node on property change
-    onPropertyChanged(name, value) {
-        if (name === "serializedWorkflow") {
-            this.inheritWidgetValues();
-        }
-    }
-
-    updateSerializedWorkflow() {
-        // Update the serialized workflow with the current values of the widgets
-        const serialized = this.properties.nestedData.nestedNodes;
-        let widgetIdx = 0;
-        for (const i in serialized) {
-            const node = serialized[i];
-            for (const j in node.widgets_values) {
-                node.widgets_values[j] = this.widgets[widgetIdx].value;
-                widgetIdx++;
-            }
-        }
-    }
-
-    onWidgetChanged(name, value, old_value, widget) {
-        this.updateSerializedWorkflow();
-    }
-
-    beforeQueuePrompt() {
-        this.updateSerializedWorkflow()
     }
 
     unnest() {

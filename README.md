@@ -38,10 +38,13 @@ git clone https://github.com/ssitu/ComfyUI_NestedNodeBuilder
   The nodes that are nested are stored in the properties of the nested node. Before the prompt is calculated, the nested node is replaced with the nodes that it stored. After the prompt is calculated, the nodes are nested again. Depending on performance, this may cause a quick flash of what the workflow looks like after the nodes are unnested when queueing a prompt. This seemed to be the approach that was the least intrusive on the ComfyUI codebase.
 </details>
 
-## Problems
+## Known Problems
 - Special nodes such as primitive and reroute nodes cannot be nested.
-- Nesting two nodes that have a "control_after_generate" widget will cause the resulting node to keep only one of the widgets, and also corrupts the values of widgets that follow it.
-- Nested nodes cannot be nested.
+- When nesting multiple nodes with widgets like control_after_generate, there can only be one in the resulting nested node.
+- Nested nodes can be nested, but nested nodes containing other nested nodes cannot execute.
+- Widgets that have been converted to inputs might be overlapped by a widget.
+- When converting a seed widget to input and connecting it to a primitive node, the prompt will ignore the control_after_generate widget of the primitive node and yield to the underlying control_after_generate widget of the respective node.
+- Can be difficult to tell which inputs/widgets go to which node if there are duplicate input and widget names.
 - Can't really nest output nodes such as preview image and save image nodes. It works but it won't display the image. You can still see the image if loading the prompt from the history.
 
 ## Credits
