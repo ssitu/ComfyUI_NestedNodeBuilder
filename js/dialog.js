@@ -45,3 +45,39 @@ export class ComfirmDialog {
         }
     }
 }
+
+export function showWidgetDialog(pos, onEnter, onCancel) {
+    if (!onEnter) {
+        onEnter = () => {};
+    }
+    if (!onCancel) {
+        onCancel = () => {};
+    }
+    let dialog = app.canvas.createDialog(
+        "<span class='name'>Name for nested node:</span><input autofocus type='text' class='value'/><button>OK</button>",
+        { position: pos }
+    );
+    let input = dialog.querySelector("input");
+    const cancel = () => {
+        onCancel();
+        dialog.close();
+    };
+    const enter = () => {
+        onEnter(input);
+        dialog.close();
+    };
+    input.addEventListener("keydown", function (e) {
+        if (e.keyCode == 27) { // ESC
+            cancel();
+        } else if (e.keyCode == 13) { // ENTER
+            enter();
+        } else if (e.keyCode != 13) {
+            dialog.modified();
+            return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+    });
+    let button = dialog.querySelector("button");
+    button.addEventListener("click", enter);
+}

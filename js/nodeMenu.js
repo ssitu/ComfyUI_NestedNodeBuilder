@@ -1,7 +1,7 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
 import { NestedNode, serializeWorkflow } from "./nestedNode.js";
-import { ComfirmDialog } from "./dialog.js";
+import { ComfirmDialog, showWidgetDialog } from "./dialog.js";
 import { Queue } from "./queue.js";
 
 export const ext = {
@@ -301,12 +301,7 @@ export const ext = {
 
     createNestSelectedDialog(selectedNodes) {
         const pos = [window.innerWidth / 3, 2 * window.innerHeight / 3];
-        let dialog = app.canvas.createDialog(
-            "<span class='name'>Name for nested node:</span><input autofocus type='text' class='value'/><button>OK</button>",
-            { position: pos }
-        );
-        let input = dialog.querySelector("input");
-        const enterName = () => {
+        const enterName = (input) => {
             // Check if the name already exists in the defs
             const name = input.value;
             if (name in this.nestedNodeDefs) {
@@ -325,24 +320,8 @@ export const ext = {
                 // Successfully entered a valid name
                 this.nestSelectedNodes(selectedNodes, name);
             }
-            dialog.close();
         }
-        input.addEventListener("keydown", function (e) {
-            if (e.keyCode == 27) {
-                //ESC
-                dialog.close();
-            } else if (e.keyCode == 13) {
-                // ENTER
-                enterName(); // save
-            } else if (e.keyCode != 13) {
-                dialog.modified();
-                return;
-            }
-            e.preventDefault();
-            e.stopPropagation();
-        });
-        let button = dialog.querySelector("button");
-        button.addEventListener("click", enterName);
+        showWidgetDialog(pos, enterName);
     },
 
     onMenuNestSelectedNodes() {
@@ -617,4 +596,3 @@ export function isStructurallyEqual(nestedWorkflow1, nestedWorkflow2) {
     }
     return true;
 }
-
