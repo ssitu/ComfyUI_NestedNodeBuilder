@@ -132,18 +132,20 @@ export class NestedNode {
 
     inheritConvertedWidgets() {
         const serialized = this.properties.nestedData.nestedNodes;
-        let widgetIdx = 0;
+        const widgetToCount = {};
         for (const nodeIdx in serialized) {
             const node = serialized[nodeIdx];
             for (const inputIdx in node.inputs ?? []) {
                 const input = node.inputs[inputIdx];
                 if (input.widget) {
-                    for (; widgetIdx < this.widgets.length; widgetIdx++) {
+                    const nestedWidgetName = input.widget.name + (widgetToCount[input.widget.name] ?? '');
+                    for (let widgetIdx = 0; widgetIdx < this.widgets.length; widgetIdx++) {
                         const widget = this.widgets[widgetIdx];
-                        const widgetName = widget.name.replace(/\d+$/, '');
-                        if (widgetName === input.widget.name) {
+                        const widgetName = widget.name;
+                        if (widgetName === nestedWidgetName) {
                             const config = getConfig(nodeDefs[node.type], widget);
                             convertToInput(this, widget, config);
+                            widgetToCount[input.widget.name] = (widgetToCount[input.widget.name] ?? 1) + 1;
                             break;
                         }
                     }
