@@ -4,9 +4,10 @@ import { NestedNode, serializeWorkflow } from "./nestedNode.js";
 import { ComfirmDialog, showWidgetDialog } from "./dialog.js";
 import { Queue } from "./queue.js";
 
+export let nodeDefs = {};
+
 export const ext = {
     name: "SS.NestedNodeBuilder",
-    defs: {},
     nestedDef: {},
     nestedNodeDefs: {},
     comfirmationDialog: new ComfirmDialog(),
@@ -124,7 +125,7 @@ export const ext = {
      */
     async addCustomNodeDefs(defs, app) {
         // Save definitions for reference
-        this.defs = defs;
+        nodeDefs = defs;
         // Grab nested node definitions
         const resp = await fetch("/nested_node_defs")
         const nestedNodeDefs = await resp.json();
@@ -290,7 +291,7 @@ export const ext = {
         // Inherit inputs and outputs for each node
         for (const id in serializedWorkflow) {
             const node = serializedWorkflow[id];
-            const nodeDef = this.defs[node.type];
+            const nodeDef = nodeDefs[node.type];
             // Inherit inputs
             inheritInputs(node, nodeDef, nestedDef, linksMapping);
             // Inherit outputs
