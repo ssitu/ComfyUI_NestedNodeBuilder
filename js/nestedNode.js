@@ -61,14 +61,14 @@ export class NestedNode {
     isSetup = false;
 
     nestedNodeSetup() {
-        if (!this.isSetup) {
-            this.addWidgetListeners();
-            this.isSetup = true;
-        }
+        this.addWidgetListeners();
     }
 
     onAdded() {
-        this.nestedNodeSetup();
+        if (!this.isSetup) {
+            this.nestedNodeSetup();
+            this.isSetup = true;
+        }
     }
 
     // Nest the workflow within this node
