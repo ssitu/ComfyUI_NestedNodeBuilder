@@ -58,9 +58,14 @@ function averagePos(nodes) {
 
 export class NestedNode {
 
-    isSetup = false;
-
     nestedNodeSetup() {
+        this.numDefinedInputs = 0;
+        for (const input of this.inputs) {
+            if (input.widget) {
+                break;
+            }
+            this.numDefinedInputs++;
+        }
         this.addWidgetListeners();
     }
 
@@ -142,6 +147,9 @@ export class NestedNode {
                     for (let widgetIdx = 0; widgetIdx < this.widgets.length; widgetIdx++) {
                         const widget = this.widgets[widgetIdx];
                         const widgetName = widget.name;
+                        if (widget.type !== CONVERTED_TYPE) {
+                            continue;
+                        }
                         if (widgetName === nestedWidgetName) {
                             const config = getConfig(nodeDefs[node.type], widget);
                             convertToInput(this, widget, config);
@@ -229,14 +237,26 @@ export class NestedNode {
     }
 
     getNestedInputSlot(internalNodeId, internalSlotId) {
-        // Converts a node slot that was nested into a slot of the resulting nested node
+        // Converts a node slot that was nested into a slot of the resulting nested node.
         const serialized = this.properties.nestedData.nestedNodes;
         const linksMapping = mapLinksToNodes(serialized);
         let slotIdx = 0;
+        // Keep separate index for converted widgets, since they are put at the end of the defined inputs.
+        let convertedSlotIdx = 0;
         for (const i in serialized) {
             const node = serialized[i];
-            for (let inputIdx = 0; inputIdx < (node.inputs ?? []).length; inputIdx++) {
-                if (node.id === internalNodeId && inputIdx === internalSlotId) {
+            const nodeInputs = node.inputs ?? [];
+            for (let inputIdx = 0; inputIdx < nodeInputs.length; inputIdx++) {
+                const isConvertedWidget = !!nodeInputs[inputIdx].widget;
+                const isCorrectSlot = node.id === internalNodeId && inputIdx === internalSlotId;
+                if (isConvertedWidget) {
+                    if (isCorrectSlot) {
+                        return this.numDefinedInputs + convertedSlotIdx;
+                    }
+                    convertedSlotIdx++;
+                    continue;
+                }
+                if (isCorrectSlot) {
                     return slotIdx;
                 }
                 if (!isInputInternal(node, inputIdx, linksMapping)) {
@@ -413,84 +433,84 @@ const CONVERTED_TYPE = "converted-widget";
 const VALID_TYPES = ["STRING", "combo", "number"];
 
 export function isConvertableWidget(widget, config) {
-	return VALID_TYPES.includes(widget.type) || VALID_TYPES.includes(config[0]);
+    return VALID_TYPES.includes(widget.type) || VALID_TYPES.includes(config[0]);
 }
 
 function hideWidget(node, widget, suffix = "") {
-	widget.origType = widget.type;
-	widget.origComputeSize = widget.computeSize;
-	widget.origSerializeValue = widget.serializeValue;
-	widget.computeSize = () => [0, -4]; // -4 is due to the gap litegraph adds between widgets automatically
-	widget.type = CONVERTED_TYPE + suffix;
-	widget.serializeValue = () => {
-		// Prevent serializing the widget if we have no input linked
-		const { link } = node.inputs.find((i) => i.widget?.name === widget.name);
-		if (link == null) {
-			return undefined;
-		}
-		return widget.origSerializeValue ? widget.origSerializeValue() : widget.value;
-	};
+    widget.origType = widget.type;
+    widget.origComputeSize = widget.computeSize;
+    widget.origSerializeValue = widget.serializeValue;
+    widget.computeSize = () => [0, -4]; // -4 is due to the gap litegraph adds between widgets automatically
+    widget.type = CONVERTED_TYPE + suffix;
+    widget.serializeValue = () => {
+        // Prevent serializing the widget if we have no input linked
+        const { link } = node.inputs.find((i) => i.widget?.name === widget.name);
+        if (link == null) {
+            return undefined;
+        }
+        return widget.origSerializeValue ? widget.origSerializeValue() : widget.value;
+    };
 
-	// Hide any linked widgets, e.g. seed+seedControl
-	if (widget.linkedWidgets) {
-		for (const w of widget.linkedWidgets) {
-			hideWidget(node, w, ":" + widget.name);
-		}
-	}
+    // Hide any linked widgets, e.g. seed+seedControl
+    if (widget.linkedWidgets) {
+        for (const w of widget.linkedWidgets) {
+            hideWidget(node, w, ":" + widget.name);
+        }
+    }
 }
 
 function showWidget(widget) {
-	widget.type = widget.origType;
-	widget.computeSize = widget.origComputeSize;
-	widget.serializeValue = widget.origSerializeValue;
+    widget.type = widget.origType;
+    widget.computeSize = widget.origComputeSize;
+    widget.serializeValue = widget.origSerializeValue;
 
-	delete widget.origType;
-	delete widget.origComputeSize;
-	delete widget.origSerializeValue;
+    delete widget.origType;
+    delete widget.origComputeSize;
+    delete widget.origSerializeValue;
 
-	// Hide any linked widgets, e.g. seed+seedControl
-	if (widget.linkedWidgets) {
-		for (const w of widget.linkedWidgets) {
-			showWidget(w);
-		}
-	}
+    // Hide any linked widgets, e.g. seed+seedControl
+    if (widget.linkedWidgets) {
+        for (const w of widget.linkedWidgets) {
+            showWidget(w);
+        }
+    }
 }
 
 function convertToInput(node, widget, config) {
-	hideWidget(node, widget);
+    hideWidget(node, widget);
 
-	const { linkType } = getWidgetType(config);
+    const { linkType } = getWidgetType(config);
 
-	// Add input and store widget config for creating on primitive node
-	const sz = node.size;
-	node.addInput(widget.name, linkType, {
-		widget: { name: widget.name, config },
-	});
+    // Add input and store widget config for creating on primitive node
+    const sz = node.size;
+    node.addInput(widget.name, linkType, {
+        widget: { name: widget.name, config },
+    });
 
-	// Restore original size but grow if needed
-	node.setSize([Math.max(sz[0], node.size[0]), Math.max(sz[1], node.size[1])]);
+    // Restore original size but grow if needed
+    node.setSize([Math.max(sz[0], node.size[0]), Math.max(sz[1], node.size[1])]);
 }
 
 function convertToWidget(node, widget) {
-	showWidget(widget);
-	const sz = node.size;
-	node.removeInput(node.inputs.findIndex((i) => i.widget?.name === widget.name));
+    showWidget(widget);
+    const sz = node.size;
+    node.removeInput(node.inputs.findIndex((i) => i.widget?.name === widget.name));
 
-	// Restore original size but grow if needed
-	node.setSize([Math.max(sz[0], node.size[0]), Math.max(sz[1], node.size[1])]);
+    // Restore original size but grow if needed
+    node.setSize([Math.max(sz[0], node.size[0]), Math.max(sz[1], node.size[1])]);
 }
 
 function getWidgetType(config) {
-	// Special handling for COMBO so we restrict links based on the entries
-	let type = config[0];
-	let linkType = type;
-	if (type instanceof Array) {
-		type = "COMBO";
-		linkType = linkType.join(",");
-	}
-	return { type, linkType };
+    // Special handling for COMBO so we restrict links based on the entries
+    let type = config[0];
+    let linkType = type;
+    if (type instanceof Array) {
+        type = "COMBO";
+        linkType = linkType.join(",");
+    }
+    return { type, linkType };
 }
 
 function getConfig(nodeData, widget) {
-	return nodeData?.input?.required[widget.name] || nodeData?.input?.optional?.[widget.name] || [widget.type, widget.options || {}];
+    return nodeData?.input?.required[widget.name] || nodeData?.input?.optional?.[widget.name] || [widget.type, widget.options || {}];
 }
