@@ -5,6 +5,8 @@ import { mapLinksToNodes, isOutputInternal, isInputInternal, nodeDefs } from "./
 export const nestedNodeType = "NestedNode";
 export const nestedNodeTitle = "Nested Node";
 
+export const HIDDEN_CONVERTED_TYPE = "hidden-converted-widget";
+
 export function serializeWorkflow(workflow) {
     let nodes = [];
     for (const id in workflow) {
@@ -122,8 +124,11 @@ export class NestedNode {
                 // Must skip widgets that were unable to be added to the nested node
                 const thisWidget = this.widgets?.[widgetIdx];
                 const tempWidget = tempNode?.widgets?.[j];
+                if (!thisWidget || !tempWidget) {
+                    continue;
+                }
                 // Remove trailing numbers from the name
-                const thisWidgetName = thisWidget?.name.replace(/\d+$/, '');;
+                const thisWidgetName = thisWidget?.name.replace(/\d+$/, '');
                 if (thisWidgetName !== tempWidget?.name) {
                     continue;
                 }
@@ -138,6 +143,9 @@ export class NestedNode {
     inheritConvertedWidgets() {
         const serialized = this.properties.nestedData.nestedNodes;
         const widgetToCount = {};
+        if (!this.widgets || this.widgets.length == 0) {
+            return;
+        }
         for (const nodeIdx in serialized) {
             const node = serialized[nodeIdx];
             for (const inputIdx in node.inputs ?? []) {
@@ -147,13 +155,24 @@ export class NestedNode {
                     for (let widgetIdx = 0; widgetIdx < this.widgets.length; widgetIdx++) {
                         const widget = this.widgets[widgetIdx];
                         const widgetName = widget.name;
-                        if (widget.type === CONVERTED_TYPE) {
+                        // Skip widgets that are already converted, to avoid duplicating 
+                        // converted widget inputs after queueing a prompt because the nesting node 
+                        // is reused, so it has the converted widgets already
+                        if (widget.type === CONVERTED_TYPE || widget.type === HIDDEN_CONVERTED_TYPE) {
                             continue;
                         }
                         if (widgetName === nestedWidgetName) {
                             const config = getConfig(nodeDefs[node.type], widget);
                             convertToInput(this, widget, config);
                             widgetToCount[input.widget.name] = (widgetToCount[input.widget.name] ?? 1) + 1;
+
+                            // If the serialized node has its converted widget connected to another node in the nesting,
+                            // then remove the converted widget frm the inputs.
+                            if (isInputInternal(node, inputIdx, mapLinksToNodes(serialized))) {
+                                this.inputs.pop();
+                            }
+                            // Change the type of the widget so that it won't be picked up by the right click menu
+                            widget.type = HIDDEN_CONVERTED_TYPE;
                             break;
                         }
                     }
@@ -173,6 +192,11 @@ export class NestedNode {
 
                 const thisWidget = this.widgets?.[widgetIdx];
                 const tempWidget = tempNode?.widgets?.[j];
+
+                if (!thisWidget || !tempWidget) {
+                    continue;
+                }
+
                 const thisWidgetName = thisWidget?.name.replace(/\d+$/, '');;
                 if (thisWidgetName !== tempWidget?.name) {
                     continue;
@@ -186,7 +210,7 @@ export class NestedNode {
 
     // Add listeners to the widgets
     addWidgetListeners() {
-        for (const widget of this.widgets) {
+        for (const widget of this.widgets ?? []) {
             if (widget.inputEl) {
                 widget.inputEl.addEventListener("change", (e) => {
                     this.onWidgetChanged(widget.name, widget.value, widget.value, widget);
@@ -303,6 +327,8 @@ export class NestedNode {
         for (const idx in serializedWorkflow) {
             const serializedNode = serializedWorkflow[idx];
             const node = LiteGraph.createNode(serializedNode.type);
+            // Fix for Primitive nodes, which check for the existence of the graph
+            node.graph = app.graph;
             node.configure(serializedNode);
 
             const dx = serializedNode.pos[0] - avgPos[0];

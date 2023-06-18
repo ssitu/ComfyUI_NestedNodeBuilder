@@ -426,7 +426,7 @@ export function mapLinksToNodes(serializedWorkflow) {
 function inheritInputs(node, nodeDef, nestedDef, linkMapping) {
     // For each input from nodeDef, add it to the nestedDef if the input is connected
     // to a node outside the serialized workflow
-    for (const inputType in nodeDef.input) { // inputType is required, optional, etc.
+    for (const inputType in (nodeDef?.input) ?? []) { // inputType is required, optional, etc.
         // Add the input type if it doesn't exist
         if (!(inputType in nestedDef.input)) {
             nestedDef.input[inputType] = {};
@@ -493,7 +493,7 @@ function inheritOutputs(node, nodeDef, nestedDef, linksMapping) {
     // Outputs do not have a type, and they can connect to multiple nodes.
     // Inputs were either a link or a widget.
     // Only keep outputs that connect to nodes outside the nested workflow.
-    for (const outputIdx in nodeDef.output) {
+    for (const outputIdx in (nodeDef?.output) ?? []) {
         if (isOutputInternal(node, outputIdx, linksMapping)) {
             continue;
         }
