@@ -147,7 +147,7 @@ export class NestedNode {
                     for (let widgetIdx = 0; widgetIdx < this.widgets.length; widgetIdx++) {
                         const widget = this.widgets[widgetIdx];
                         const widgetName = widget.name;
-                        if (widget.type !== CONVERTED_TYPE) {
+                        if (widget.type === CONVERTED_TYPE) {
                             continue;
                         }
                         if (widgetName === nestedWidgetName) {
