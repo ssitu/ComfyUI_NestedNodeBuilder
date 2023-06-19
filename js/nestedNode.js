@@ -322,6 +322,7 @@ export class NestedNode {
         // Add the nodes inside the nested node
         const nestedNodes = [];
         const internalOutputList = [];
+        const internalInputList = [];
         const avgPos = averagePos(serializedWorkflow);
         const serializedToNodeMapping = {};
         for (const idx in serializedWorkflow) {
@@ -334,6 +335,12 @@ export class NestedNode {
             const dx = serializedNode.pos[0] - avgPos[0];
             const dy = serializedNode.pos[1] - avgPos[1];
             node.pos = [this.pos[0] + dx, this.pos[1] + dy];
+
+            const isInputsInternal = [];
+            for (let i = 0; i < (serializedNode.inputs ?? []).length; i++) {
+                isInputsInternal.push(isInputInternal(serializedNode, i, linksMapping));
+            }
+            internalInputList.push(isInputsInternal);
 
             const isOutputsInternal = [];
             for (const i in serializedNode.outputs) {
@@ -388,6 +395,10 @@ export class NestedNode {
                 // Out of bounds, rest of the inputs are not connected to the outside
                 if (nestedInputSlot >= (this.inputs ?? []).length) {
                     break;
+                }
+                // If the input is only connected internally, then skip
+                if (internalInputList[i][inputSlot]) {
+                    continue;
                 }
                 // If types don't match, then skip this input
                 if (node.inputs[inputSlot].type !== this.inputs[nestedInputSlot].type) {
