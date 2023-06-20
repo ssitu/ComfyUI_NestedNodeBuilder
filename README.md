@@ -15,21 +15,22 @@ git clone https://github.com/ssitu/ComfyUI_NestedNodeBuilder
 ### Demo:
 ![NestedNodeBuilderDemo](https://github.com/ssitu/ComfyUI_NestedNodeBuilder/assets/57548627/f88fc1dc-ec64-4a48-b989-2857de088b67)
 
+### Instructions:
 <details>
-  <summary><h3>1. Selecting the nodes to nest</h3></summary>
+  <summary>1. Selecting the nodes to nest</summary>
   Select multiple nodes by using <code>Ctrl/Shift + left/right click</code> on the desired nodes to nest. 
   You can also use <code>Ctrl + left click + drag</code> to highlight nodes.
 </details>
 <details>
-  <summary><h3>2. Nesting the selected nodes</h3></summary>
+  <summary>2. Nesting the selected nodes</summary>
   After making a selection, <code>right click</code> on any of the selected nodes and select <code>Nest Selected Nodes</code> and choose a name that won't conflict with any other existing node. The selected nodes will be replaced with a new node that contains the selected nodes. You can also unnest the new node by right clicking on the node and clicking <code>Unnest</code>. The selected nodes may also be converted to an already existing nested node using the <code>Convert selected to Nested Node: &ltname&gt</code> option that appears if the selected nodes have a similar structure.
 </details>
 <details>
-    <summary><h3>3. Creating a nested node from the node menu</h3></summary>
+    <summary>3. Creating a nested node from the node menu</summary>
     Nested nodes are saved and can be created again from the node menu that appears when you <code>right click</code> on the canvas under the <code>Nested Nodes</code> category.
 </details>
 <details>
-    <summary><h3>4. Where are nested nodes saved?</h3></summary>
+    <summary>4. Where are nested nodes saved?</summary>
     You can find them under <code>ComfyUI/custom_nodes/ComfyUI_NestedNodeBuilder/nested_nodes/</code>. This directory can be changed by editing the <code>nested_nodes_path</code> entry in the <code>config.yaml</code>. The nested nodes are stored as .json files. The names of the nested nodes may be changed by editing their .json files. The changes made to the directory are registered after refreshing the web UI.
 </details>
 
@@ -42,7 +43,9 @@ git clone https://github.com/ssitu/ComfyUI_NestedNodeBuilder
 - When nesting multiple nodes with widgets like control_after_generate, there can only be one in the resulting nested node.
 - Nested nodes can be nested, but nested nodes containing other nested nodes cannot execute.
 - When converting a seed widget to input and connecting it to a primitive node, the prompt will ignore the control_after_generate widget of the primitive node and yield to the underlying control_after_generate widget of the respective node. Can be solved by changing the values to "fixed" before nesting.
-- Can't really nest output nodes such as preview image and save image nodes. It works but it won't display the image. You can still see the image if loading the prompt from the history.
+- Can't really nest output nodes such as preview image and save image nodes. It works, but it won't display the image. You can still see the image if loading the prompt from the history.
+
+Feel free to open an issue if you find any other problems.
 
 ## Credits
-Inspired by [this repo by Itdrdata](https://github.com/ltdrdata/ComfyUI-Workflow-Component), check it out if you want something more robust and flexible.
+Inspired by [this repo by ltdrdata](https://github.com/ltdrdata/ComfyUI-Workflow-Component), check it out if you want something more robust and flexible.
