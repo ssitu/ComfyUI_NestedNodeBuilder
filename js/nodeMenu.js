@@ -437,7 +437,7 @@ function inheritInputs(node, nodeDef, nestedDef, linkMapping) {
             let uniqueInputName = inputName;
             let i = 2;
             while (uniqueInputName in nestedDef.input[inputType]) {
-                uniqueInputName = inputName + i;
+                uniqueInputName = inputName + "_" + i;
                 i++;
             }
             const isRemainingWidgets = node.inputs === undefined || linkInputIdx >= node.inputs.length;
