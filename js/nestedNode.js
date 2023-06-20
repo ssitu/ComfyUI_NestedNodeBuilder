@@ -81,7 +81,7 @@ export class NestedNode {
         this.onConfigure = function () {
             const widgets = [];
             for (const input of this.inputs ?? []) {
-                if (input.widget) {
+                if (input.isInherited) {
                     widgets.push(input.widget);
                     input.widget = undefined;
                 } else {
@@ -231,6 +231,7 @@ export class NestedNode {
                                 widget.type = HIDDEN_CONVERTED_TYPE;
                             } else {
                                 widget.type = INHERITED_CONVERTED_TYPE;
+                                this.inputs.at(-1).isInherited = true;
                             }
                             break;
                         }
