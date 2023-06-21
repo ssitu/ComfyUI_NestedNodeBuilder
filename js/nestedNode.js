@@ -249,8 +249,8 @@ export class NestedNode {
                         const widgetName = widget.name;
                         // Skip widgets that are already converted, to avoid duplicating 
                         // converted widget inputs after queueing a prompt because the nesting node 
-                        // is reused, so it has the converted widgets already
-                        if (widget.type === INHERITED_CONVERTED_TYPE || widget.type === HIDDEN_CONVERTED_TYPE) {
+                        // is reused, so it has the converted widgets already)
+                        if (widget.type === INHERITED_CONVERTED_TYPE || widget.type === HIDDEN_CONVERTED_TYPE || widget.type === CONVERTED_TYPE) {
                             continue;
                         }
                         if (widgetName === nestedWidgetName) {
