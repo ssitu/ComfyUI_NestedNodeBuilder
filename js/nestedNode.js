@@ -194,7 +194,7 @@ export class NestedNode {
                 this.widgets.splice(widgetIdx - 1, 0, widget);
                 widgetIdx++;
             } else {
-                widgetIdx += node.widgets_values.length;
+                widgetIdx += (node.widgets_values ?? []).length;
             }
         }
     }
