@@ -191,12 +191,10 @@ export class NestedNode {
                 const widget = tempNode.widgets[0];
                 delete widget.callback
                 widget.name = tempNode.title
-                this.widgets.splice(widgetIdx, 0, widget);
+                this.widgets.splice(widgetIdx - 1, 0, widget);
                 widgetIdx++;
             } else {
-                for (const j in node.widgets_values) {
-                    widgetIdx++;
-                }
+                widgetIdx += node.widgets_values.length;
             }
         }
     }
