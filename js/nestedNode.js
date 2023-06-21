@@ -70,11 +70,16 @@ function averagePos(nodes) {
 export class NestedNode {
 
     nestedNodeSetup() {
+        console.log("[NestedNodeBuilder] Nested node setup")
         this.addWidgetListeners();
         this.nestedNodeIdMapping = arrToIdMap(this.properties.nestedData.nestedNodes);
+        
+        this.inheritRerouteNodeInputs();
         this.inheritConvertedWidgets();
+        this.inheritPrimitiveWidgets();
         this.renameInputs();
         this.resizeNestedNode();
+        this.inheritWidgetValues();
 
         // Avoid widgetInputs.js from changing the widget type
         const origOnConfigure = this.onConfigure;
@@ -118,17 +123,17 @@ export class NestedNode {
 
     // Nest the workflow within this node
     nestWorkflow(workflow) {
+        console.log("[NestedNodeBuilder] Nesting workflow")
         // Node setup
-        this.properties.nestedData = {};
-        this.properties.nestedData.nestedNodes = serializeWorkflow(workflow);
+        this.properties.nestedData = {nestedNodes: serializeWorkflow(workflow)};
         this.placeNestedNode(workflow);
-        this.inheritRerouteNodeInputs();
-        this.inheritConvertedWidgets();
+        // this.inheritRerouteNodeInputs();
+        // this.inheritConvertedWidgets();
         // this.renameInputs();
         this.inheritLinks();
-        this.inheritWidgetValues();
+        // this.inheritWidgetValues();
         this.removeNestedNodes(workflow);
-        this.resizeNestedNode();
+        // this.resizeNestedNode();
     }
 
     // Remove the nodes that are being nested
@@ -160,6 +165,39 @@ export class NestedNode {
         // Widgets
         for (const widget of this.widgets ?? []) {
             widget.name = widget.name.replace(/_\d+$/, '');
+        }
+    }
+
+    inheritPrimitiveWidgets() {
+        const serialized = this.properties.nestedData.nestedNodes;
+        const linksMapping = mapLinksToNodes(serialized);
+        let widgetIdx = 0;
+        for (const i in serialized) {
+            const node = serialized[i];
+            // Create a temporary node to get access to widgets that are not 
+            // included in its node definition (e.g. control_after_generate)
+            const tempNode = LiteGraph.createNode(node.type);
+            if (tempNode.type == "PrimitiveNode" && node.outputs[0].links) {
+                const tempGraph = new LiteGraph.LGraph();
+                tempGraph.add(tempNode);
+                const linkId = node.outputs[0].links[0];
+                const entry = linksMapping[linkId];
+                const dst = this.nestedNodeIdMapping[entry.dstId];
+                const dstNode = LiteGraph.createNode(dst.type);
+                tempGraph.add(dstNode);
+                dstNode.configure(dst);
+                tempNode.configure(node);
+                // Using the first widget for now, since that is the one with the actual value
+                const widget = tempNode.widgets[0];
+                delete widget.callback
+                widget.name = tempNode.title
+                this.widgets.splice(widgetIdx, 0, widget);
+                widgetIdx++;
+            } else {
+                for (const j in node.widgets_values) {
+                    widgetIdx++;
+                }
+            }
         }
     }
 
@@ -251,19 +289,28 @@ export class NestedNode {
             for (const j in node.widgets_values) {
 
                 const thisWidget = this.widgets?.[widgetIdx];
+                if (!thisWidget) continue;
                 const tempWidget = tempNode?.widgets?.[j];
 
-                if (!thisWidget || !tempWidget) {
-                    continue;
+                if (node.type !== "PrimitiveNode") {
+                    // Undefined widget
+                    if (!tempWidget) continue;
+
+                    const thisWidgetName = thisWidget?.name.replace(/_\d+$/, '');
+                    if (thisWidgetName !== tempWidget?.name) continue;
+                    node.widgets_values[j] = thisWidget.value;
+                    widgetIdx++;
+                } else {
+                    // Widgets for Primitive nodes will always be undefined
+                    const thisWidgetName = thisWidget?.name.replace(/_\d+$/, '');
+                    if (thisWidgetName !== node.title) continue;
+
+                    node.widgets_values[j] = thisWidget.value;
+                    widgetIdx++;
+                    // Skip the rest of the widgets of the primitive node, only care about the value widget
+                    break;
                 }
 
-                const thisWidgetName = thisWidget?.name.replace(/_\d+$/, '');
-                if (thisWidgetName !== tempWidget?.name) {
-                    continue;
-                }
-
-                node.widgets_values[j] = thisWidget.value;
-                widgetIdx++;
             }
         }
     }
