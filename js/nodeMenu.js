@@ -35,12 +35,7 @@ export const ext = {
             }
 
             // Call the original function
-            try {
-                await originalQueuePrompt.call(this, number, batchsize);
-            }
-            catch (error) {
-                console.log("Error in queuePrompt:", error);
-            }
+            await originalQueuePrompt.call(this, number, batchsize);
 
             // Renest all nested nodes
             let i = 0;
