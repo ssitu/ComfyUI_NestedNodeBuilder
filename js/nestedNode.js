@@ -73,6 +73,7 @@ export class NestedNode {
         console.log("[NestedNodeBuilder] Nested node setup")
         this.addWidgetListeners();
         this.nestedNodeIdMapping = arrToIdMap(this.properties.nestedData.nestedNodes);
+        this.linksMapping = mapLinksToNodes(this.properties.nestedData.nestedNodes);
         
         this.inheritRerouteNodeInputs();
         this.inheritConvertedWidgets();
@@ -126,6 +127,7 @@ export class NestedNode {
         console.log("[NestedNodeBuilder] Nesting workflow")
         // Node setup
         this.properties.nestedData = {nestedNodes: serializeWorkflow(workflow)};
+        this.linksMapping = mapLinksToNodes(this.properties.nestedData.nestedNodes);
         this.placeNestedNode(workflow);
         // this.inheritRerouteNodeInputs();
         // this.inheritConvertedWidgets();
@@ -170,7 +172,7 @@ export class NestedNode {
 
     inheritPrimitiveWidgets() {
         const serialized = this.properties.nestedData.nestedNodes;
-        const linksMapping = mapLinksToNodes(serialized);
+        const linksMapping = this.linksMapping;
         let widgetIdx = 0;
         for (const i in serialized) {
             const node = serialized[i];
@@ -232,7 +234,7 @@ export class NestedNode {
     inheritConvertedWidgets() {
         const serialized = this.properties.nestedData.nestedNodes;
         const widgetToCount = {};
-        const linksMapping = mapLinksToNodes(serialized);
+        const linksMapping = this.linksMapping;
         if (!this.widgets || this.widgets.length == 0) {
             return;
         }
@@ -356,7 +358,7 @@ export class NestedNode {
 
         let inputIdx = 0;
         const serialized = this.properties.nestedData.nestedNodes;
-        const linksMapping = mapLinksToNodes(serialized);
+        const linksMapping = this.linksMapping;
         for (const node of serialized) {
             if (node.type === "Reroute" && !this.inputs?.[inputIdx]?.isReroute) {
                 // Allow the use of titles on reroute nodes for custom input names
@@ -375,8 +377,7 @@ export class NestedNode {
     // Inherit the links of its serialized workflow, 
     // must be before the nodes that are being nested are removed from the graph
     inheritLinks() {
-        const serialized = this.properties.nestedData.nestedNodes;
-        const linksMapping = mapLinksToNodes(serialized);
+        const linksMapping = this.linksMapping;
         for (const linkId in linksMapping) {
             const entry = linksMapping[linkId];
             if (entry.srcId && entry.dstId) { // Link between nodes within the nested workflow
@@ -401,7 +402,7 @@ export class NestedNode {
     getNestedInputSlot(internalNodeId, internalSlotId) {
         // Converts a node slot that was nested into a slot of the resulting nested node.
         const serialized = this.properties.nestedData.nestedNodes;
-        const linksMapping = mapLinksToNodes(serialized);
+        const linksMapping = this.linksMapping;
         let slotIdx = 0;
         // Keep separate index for converted widgets, since they are put at the end of the defined inputs.
         let convertedSlotIdx = 0;
@@ -436,7 +437,7 @@ export class NestedNode {
         const serialized = this.properties.nestedData.nestedNodes;
         let slotIdx = 0;
 
-        const linksMapping = mapLinksToNodes(serialized);
+        const linksMapping = this.linksMapping;
         for (const i in serialized) {
             const node = serialized[i];
             if (node.id === internalNodeId) {
@@ -458,7 +459,7 @@ export class NestedNode {
 
     unnest() {
         const serializedWorkflow = this.properties.nestedData.nestedNodes;
-        const linksMapping = mapLinksToNodes(serializedWorkflow);
+        const linksMapping = this.linksMapping;
         // Add the nodes inside the nested node
         const nestedNodes = [];
         const internalOutputList = [];
