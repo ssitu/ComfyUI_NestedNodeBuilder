@@ -133,7 +133,7 @@ export class NestedNode {
         // this.inheritConvertedWidgets();
         // this.renameInputs();
         this.inheritLinks();
-        // this.inheritWidgetValues();
+        this.inheritWidgetValues();
         this.removeNestedNodes(workflow);
         // this.resizeNestedNode();
     }
@@ -459,6 +459,7 @@ export class NestedNode {
 
     unnest() {
         const serializedWorkflow = this.properties.nestedData.nestedNodes;
+        this.linksMapping = mapLinksToNodes(serializedWorkflow);
         const linksMapping = this.linksMapping;
         // Add the nodes inside the nested node
         const nestedNodes = [];

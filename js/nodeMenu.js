@@ -99,7 +99,7 @@ export const ext = {
         // Redirect the executing event to the nested node if the executing node is nested
         api.addEventListener("executing", ({ detail }) => {
             const unnestedToNestedIds = ext.nestedPromptQueue.peek();
-            if (detail in unnestedToNestedIds) {
+            if (detail in unnestedToNestedIds ?? {}) {
                 app.runningNodeId = unnestedToNestedIds[detail];
             }
         });
