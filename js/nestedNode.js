@@ -86,7 +86,7 @@ export class NestedNode {
         this.onConfigure = function () {
             const widgets = [];
             for (const input of this.inputs ?? []) {
-                if (input.isInherited) {
+                if (input.isInherited || (input.isReroute && input.widget)) {
                     widgets.push(input.widget);
                     input.widget = undefined;
                 } else {
@@ -347,6 +347,7 @@ export class NestedNode {
         this.addInput(name, type);
         const input = this.inputs.pop();
         this.inputs.splice(index, 0, input);
+        return input;
     }
 
     inheritRerouteNodeInputs() {
@@ -360,8 +361,9 @@ export class NestedNode {
             if (node.type === "Reroute" && !this.inputs?.[inputIdx]?.isReroute) {
                 // Allow the use of titles on reroute nodes for custom input names
                 const inputName = node.title ? node.title : node.outputs[0].name;
-                this.insertInput(inputName, node.outputs[0].name, inputIdx);
-                this.inputs[inputIdx].isReroute = true;
+                const newInput = this.insertInput(inputName, node.outputs[0].name, inputIdx);
+                newInput.isReroute = true;
+                newInput.widget = node?.inputs?.[0]?.widget;
             }
             for (let i = 0; i < (node.inputs ?? []).length; i++) {
                 const isConvertedWidget = !!node.inputs[i].widget;
