@@ -345,6 +345,9 @@ export const ext = {
                     const nestedNode = LiteGraph.createNode(nestedDef.name);
                     app.graph.add(nestedNode);
                     nestedNode.nestWorkflow(selectedNodes);
+
+                    // Add new node to selection
+                    app.canvas.selectNode(nestedNode, true);
                 }, (error) => {
                     console.log("Error registering nodes:", error);
                 });

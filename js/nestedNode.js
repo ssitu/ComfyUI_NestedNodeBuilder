@@ -134,9 +134,6 @@ export class NestedNode {
         // this.inheritWidgetValues();
         this.removeNestedNodes(workflow);
         // this.resizeNestedNode();
-
-        // Add new node to selection
-        app.canvas.selectNode(this, true);
     }
 
     // Remove the nodes that are being nested
