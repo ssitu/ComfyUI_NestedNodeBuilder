@@ -215,12 +215,14 @@ export class NestedNode {
                 // Must skip widgets that were unable to be added to the nested node
                 const thisWidget = this.widgets?.[widgetIdx];
                 const tempWidget = tempNode?.widgets?.[j];
-                if (!thisWidget || !tempWidget) {
+                // If primitive, then tempWidget will always be undefined
+                if (!thisWidget || (!tempWidget && tempNode.type !== "PrimitiveNode")) {
                     continue;
                 }
                 // Remove trailing numbers from the name
                 const thisWidgetName = thisWidget?.name.replace(/_\d+$/, '');
-                if (thisWidgetName !== tempWidget?.name) {
+                const primitveMatch = node.type === "PrimitiveNode" && thisWidget?.name === node.title;
+                if (thisWidgetName !== tempWidget?.name && !primitveMatch) {
                     continue;
                 }
                 const widget_value = node.widgets_values[j];
