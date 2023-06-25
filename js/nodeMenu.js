@@ -142,30 +142,18 @@ export const ext = {
      */
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
         // Return if the node is not a nested node
-        let isNestedNode = false;
-        for (const defName in this.nestedNodeDefs) {
-            if (defName === nodeData.name) {
-                isNestedNode = true;
-                break;
-            }
-        }
-        if (!isNestedNode) {
+        if (!(nodeData.name in this.nestedNodeDefs)) {
             return;
         }
 
         // Add Nested Node methods to the node ComfyNode
-        const nestedNodePrototype = NestedNode.prototype;
-        for (const key of Object.getOwnPropertyNames(nestedNodePrototype)) {
-            nodeType.prototype[key] = nestedNodePrototype[key];
-        }
+        Object.defineProperties(nodeType.prototype, Object.getOwnPropertyDescriptors(NestedNode.prototype));
 
         // Add the nested node data to the node properties
         const onNodeCreated = nodeType.prototype.onNodeCreated;
         nodeType.prototype.onNodeCreated = function () {
-            const result = onNodeCreated ? onNodeCreated.apply(this, arguments) : undefined;
-            if (!this.properties || !("nestedData" in this.properties)) {
-                this.addProperty("nestedData", nodeData.description, "object");
-            }
+            const result = onNodeCreated?.apply(this, arguments);
+            this.addProperty("nestedData", nodeData.description, "object");
             return result;
         }
     },
@@ -177,27 +165,16 @@ export const ext = {
      */
     loadedGraphNode(node, app) {
         // Return if the node is not a nested node
-        if (!node.properties.nestedData) {
-            return;
-        }
+        if (!node.properties.nestedData) return;
 
         // Return if a nested node definition with the same name already exists
-        if (this.nestedNodeDefs[node.type]) {
-            return;
-        }
+        if (this.nestedNodeDefs[node.type]) return;
 
         // Use the serialized workflow to create a nested node definition
         const nestedDef = this.createNestedDef(node.properties.nestedData.nestedNodes, node.type);
 
-        //
         // If the definition already exists, then the node will be loaded with the existing definition
-        //
-        for (const defName in this.nestedNodeDefs) {
-            const def = this.nestedNodeDefs[defName];
-            if (def.name === nestedDef.name) {
-                return;
-            }
-        }
+        if (Object.values(this.nestedNodeDefs).some(def => def.name === nestedDef.name)) return;
 
         //
         // When the nested node is loaded but missing def, it can still work.
@@ -287,9 +264,7 @@ export const ext = {
         for (const id in serializedWorkflow) {
             const node = serializedWorkflow[id];
             const nodeDef = nodeDefs[node.type];
-            // Inherit inputs
             inheritInputs(node, nodeDef, nestedDef, linksMapping);
-            // Inherit outputs
             inheritOutputs(node, nodeDef, nestedDef, linksMapping);
         }
         return nestedDef;

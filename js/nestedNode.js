@@ -69,11 +69,15 @@ function averagePos(nodes) {
 
 export class NestedNode {
 
+    get nestedNodes() {
+        return this.properties.nestedData.nestedNodes;
+    }
+
     nestedNodeSetup() {
         console.log("[NestedNodeBuilder] Nested node setup")
         this.addWidgetListeners();
-        this.nestedNodeIdMapping = arrToIdMap(this.properties.nestedData.nestedNodes);
-        this.linksMapping = mapLinksToNodes(this.properties.nestedData.nestedNodes);
+        this.nestedNodeIdMapping = arrToIdMap(this.nestedNodes);
+        this.linksMapping = mapLinksToNodes(this.nestedNodes);
         
         this.inheritRerouteNodeInputs();
         this.inheritConvertedWidgets();
@@ -127,7 +131,7 @@ export class NestedNode {
         console.log("[NestedNodeBuilder] Nesting workflow")
         // Node setup
         this.properties.nestedData = {nestedNodes: serializeWorkflow(workflow)};
-        this.linksMapping = mapLinksToNodes(this.properties.nestedData.nestedNodes);
+        this.linksMapping = mapLinksToNodes(this.nestedNodes);
         this.placeNestedNode(workflow);
         // this.inheritRerouteNodeInputs();
         // this.inheritConvertedWidgets();
@@ -171,7 +175,7 @@ export class NestedNode {
     }
 
     inheritPrimitiveWidgets() {
-        const serialized = this.properties.nestedData.nestedNodes;
+        const serialized = this.nestedNodes;
         const linksMapping = this.linksMapping;
         let widgetIdx = 0;
         for (const i in serialized) {
@@ -203,7 +207,7 @@ export class NestedNode {
 
     // Inherit the widget values of its serialized workflow
     inheritWidgetValues() {
-        const serialized = this.properties.nestedData.nestedNodes;
+        const serialized = this.nestedNodes;
         this.widgets_values = [];
         let widgetIdx = 0;
         for (const i in serialized) {
@@ -234,7 +238,7 @@ export class NestedNode {
     }
 
     inheritConvertedWidgets() {
-        const serialized = this.properties.nestedData.nestedNodes;
+        const serialized = this.nestedNodes;
         const widgetToCount = {};
         const linksMapping = this.linksMapping;
         if (!this.widgets || this.widgets.length == 0) {
@@ -283,7 +287,7 @@ export class NestedNode {
 
     updateSerializedWorkflow() {
         // Update the serialized workflow with the current values of the widgets
-        const serialized = this.properties.nestedData.nestedNodes;
+        const serialized = this.nestedNodes;
         let widgetIdx = 0;
         for (const i in serialized) {
             const node = serialized[i];
@@ -359,7 +363,7 @@ export class NestedNode {
         // to the node definition so they must be added manually.
 
         let inputIdx = 0;
-        const serialized = this.properties.nestedData.nestedNodes;
+        const serialized = this.nestedNodes;
         const linksMapping = this.linksMapping;
         for (const node of serialized) {
             if (node.type === "Reroute" && !this.inputs?.[inputIdx]?.isReroute) {
@@ -403,7 +407,7 @@ export class NestedNode {
 
     getNestedInputSlot(internalNodeId, internalSlotId) {
         // Converts a node slot that was nested into a slot of the resulting nested node.
-        const serialized = this.properties.nestedData.nestedNodes;
+        const serialized = this.nestedNodes;
         const linksMapping = this.linksMapping;
         let slotIdx = 0;
         // Keep separate index for converted widgets, since they are put at the end of the defined inputs.
@@ -436,7 +440,7 @@ export class NestedNode {
 
     getNestedOutputSlot(internalNodeId, internalSlotId) {
         // Converts a node slot that was nested into a slot of the resulting nested node
-        const serialized = this.properties.nestedData.nestedNodes;
+        const serialized = this.nestedNodes;
         let slotIdx = 0;
 
         const linksMapping = this.linksMapping;
@@ -460,7 +464,7 @@ export class NestedNode {
     }
 
     unnest() {
-        const serializedWorkflow = this.properties.nestedData.nestedNodes;
+        const serializedWorkflow = this.nestedNodes;
         this.linksMapping = mapLinksToNodes(serializedWorkflow);
         const linksMapping = this.linksMapping;
         // Add the nodes inside the nested node
