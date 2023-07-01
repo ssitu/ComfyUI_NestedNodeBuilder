@@ -28,10 +28,12 @@ export const ext = {
                     node.beforeQueuePrompt();
                     nestedNodes.push(node);
                     connectedInputNodes.push(node.getConnectedInputNodes());
-                    // Unnest the nested node
-                    const unnestedNodes = node.unnest();
-                    nestedNodesUnnested[node.id] = unnestedNodes;
                 }
+            }
+            // Unnest the nodes
+            for (const node of nestedNodes) {
+                const unnestedNodes = node.unnest();
+                nestedNodesUnnested[node.id] = unnestedNodes;
             }
 
             // Call the original function
