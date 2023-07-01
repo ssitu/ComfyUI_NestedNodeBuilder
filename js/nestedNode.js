@@ -78,7 +78,7 @@ export class NestedNode {
         this.addWidgetListeners();
         this.nestedNodeIdMapping = arrToIdMap(this.nestedNodes);
         this.linksMapping = mapLinksToNodes(this.nestedNodes);
-        
+
         this.inheritRerouteNodeInputs();
         this.inheritConvertedWidgets();
         this.inheritPrimitiveWidgets();
@@ -130,7 +130,7 @@ export class NestedNode {
     nestWorkflow(workflow) {
         console.log("[NestedNodeBuilder] Nesting workflow")
         // Node setup
-        this.properties.nestedData = {nestedNodes: serializeWorkflow(workflow)};
+        this.properties.nestedData = { nestedNodes: serializeWorkflow(workflow) };
         this.linksMapping = mapLinksToNodes(this.nestedNodes);
         this.placeNestedNode(workflow);
         // this.inheritRerouteNodeInputs();
@@ -398,8 +398,10 @@ export class NestedNode {
             }
             else if (entry.srcId) { // Output connected to outside
                 // This will be the new origin node
+                console.log(link.type, entry)
                 const dst = app.graph.getNodeById(link.target_id);
                 const srcSlot = this.getNestedOutputSlot(entry.srcId, entry.srcSlot);
+                console.log(entry.srcId, entry.srcSlot, srcSlot, dst.id, link.target_slot)
                 this.connect(srcSlot, dst, link.target_slot);
             }
         }
@@ -615,14 +617,19 @@ export class NestedNode {
                 if (internalOutputList[i][outputSlot]) {
                     continue;
                 }
+                console.log(node.outputs[outputSlot].type)
 
                 const links = this.getOutputInfo(nestedOutputSlot).links;
+                const toConnect = []; // To avoid invalidating the iterator
                 for (const linkId of links ?? []) {
                     const link = app.graph.links[linkId];
                     if (link) {
                         const targetNode = app.graph.getNodeById(link.target_id);
-                        node.connect(outputSlot, targetNode, link.target_slot);
+                        toConnect.push({ node: targetNode, slot: link.target_slot });
                     }
+                }
+                for (const { node: targetNode, slot: targetSlot } of toConnect) {
+                    node.connect(outputSlot, targetNode, targetSlot);
                 }
                 nestedOutputSlot++;
             }
