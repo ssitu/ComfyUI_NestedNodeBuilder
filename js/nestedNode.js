@@ -398,10 +398,8 @@ export class NestedNode {
             }
             else if (entry.srcId) { // Output connected to outside
                 // This will be the new origin node
-                console.log(link.type, entry)
                 const dst = app.graph.getNodeById(link.target_id);
                 const srcSlot = this.getNestedOutputSlot(entry.srcId, entry.srcSlot);
-                console.log(entry.srcId, entry.srcSlot, srcSlot, dst.id, link.target_slot)
                 this.connect(srcSlot, dst, link.target_slot);
             }
         }
@@ -449,10 +447,14 @@ export class NestedNode {
         for (const i in serialized) {
             const node = serialized[i];
             if (node.id === internalNodeId) {
-                if (internalSlotId >= node.outputs.length) {
-                    return null;
+                let numInternalOutputs = 0;
+                // The slot internalSlotId should be non-internal if it is included in the nested node
+                for (let j = 0; j < internalSlotId; j++) {
+                    if (isOutputInternal(node, j, linksMapping)) {
+                        numInternalOutputs++;
+                    }
                 }
-                return slotIdx + internalSlotId;
+                return slotIdx + internalSlotId - numInternalOutputs;
             }
             let numNonInternalOutputs = 0;
             for (const j in node.outputs) {
@@ -617,7 +619,6 @@ export class NestedNode {
                 if (internalOutputList[i][outputSlot]) {
                     continue;
                 }
-                console.log(node.outputs[outputSlot].type)
 
                 const links = this.getOutputInfo(nestedOutputSlot).links;
                 const toConnect = []; // To avoid invalidating the iterator
