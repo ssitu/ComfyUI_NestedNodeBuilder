@@ -9,18 +9,17 @@ export class ComfirmDialog {
     }
 
     createButtons() {
-        return $el("div", [
-            $el("button", {
-                type: "button",
-                textContent: "Yes",
-                onclick: () => this.close(),
-            }),
-            $el("button", {
-                type: "button",
-                textContent: "No",
-                onclick: () => this.close(),
-            }),
-        ]);
+        this.yesButton = $el("button", {
+            type: "button",
+            textContent: "Yes",
+            onclick: () => this.close(),
+        });
+        this.noButton = $el("button", {
+            type: "button",
+            textContent: "No",
+            onclick: () => this.close(),
+        });
+        return $el("div", [this.yesButton, this.noButton]);
     }
 
     close() {
@@ -43,21 +42,24 @@ export class ComfirmDialog {
             this.close();
             onNo();
         }
+        this.yesButton.focus();
     }
 }
 
-export function showWidgetDialog(pos, onEnter, onCancel) {
+export function showWidgetDialog(pos, prompt, onEnter, onCancel) {
     if (!onEnter) {
-        onEnter = () => {};
+        onEnter = () => { };
     }
     if (!onCancel) {
-        onCancel = () => {};
+        onCancel = () => { };
     }
+    const htmlElement = `<span class='name'>${prompt}</span><input autofocus type='text' class='value'/><button>OK</button>`
     let dialog = app.canvas.createDialog(
-        "<span class='name'>Name for nested node:</span><input autofocus type='text' class='value'/><button>OK</button>",
+        htmlElement,
         { position: pos }
     );
     let input = dialog.querySelector("input");
+    input.focus();
     const cancel = () => {
         onCancel();
         dialog.close();

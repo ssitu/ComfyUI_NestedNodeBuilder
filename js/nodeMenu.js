@@ -294,7 +294,7 @@ export const ext = {
                 this.nestSelectedNodes(selectedNodes, name);
             }
         }
-        showWidgetDialog(pos, enterName);
+        showWidgetDialog(pos, "Name for nested node:", enterName);
     },
 
     onMenuNestSelectedNodes() {
