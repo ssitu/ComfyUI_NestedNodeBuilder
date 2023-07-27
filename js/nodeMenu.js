@@ -18,20 +18,21 @@ export const ext = {
         const originalQueuePrompt = app.queuePrompt;
         app.queuePrompt = async function (number, batchsize) {
             const nestedNodesUnnested = {};
-            const nestedNodes = [];
-            const connectedInputNodes = [];
+            const nestedNodes = {};
+            const connectedInputNodes = {};
             // Unnest all nested nodes
             const nodes = app.graph._nodes;
             for (const i in nodes) {
                 const node = nodes[i];
                 if (node.properties.nestedData) {
                     node.beforeQueuePrompt();
-                    nestedNodes.push(node);
-                    connectedInputNodes.push(node.getConnectedInputNodes());
+                    nestedNodes[node.id] = node;
+                    connectedInputNodes[node.id] = node.getConnectedInputNodes();
                 }
             }
             // Unnest the nodes
-            for (const node of nestedNodes) {
+            for (const nestedNodeId in nestedNodes) {
+                const node = nestedNodes[nestedNodeId];
                 const unnestedNodes = node.unnest();
                 nestedNodesUnnested[node.id] = unnestedNodes;
             }
@@ -40,10 +41,9 @@ export const ext = {
             await originalQueuePrompt.call(this, number, batchsize);
 
             // Renest all nested nodes
-            let i = 0;
             for (const nestedId in nestedNodesUnnested) {
                 const unnestedNodes = nestedNodesUnnested[nestedId];
-                const node = nestedNodes[i];
+                const node = nestedNodes[nestedId];
 
                 // Readd the node to the graph
                 app.graph.add(node);
@@ -52,7 +52,7 @@ export const ext = {
                 node.nestWorkflow(unnestedNodes);
 
                 // Reconnect missing links
-                const inputNodes = connectedInputNodes[i];
+                const inputNodes = connectedInputNodes[nestedId];
                 const currentConnectedInputNodes = node.getConnectedInputNodes();
                 let currentIdx = 0;
                 for (const inputIdx in inputNodes) {
@@ -78,9 +78,6 @@ export const ext = {
 
                 // Call resize listeners to fix overhanging widgets
                 node.setSize(node.size);
-
-                // Increment the index
-                i++;
             }
 
             //
@@ -94,6 +91,7 @@ export const ext = {
                     unnestedToNestedIds[unnestedNode.id] = nestedId;
                 }
             }
+            console.log("[NestedNodeBuilder] unnestedToNestedIds:", unnestedToNestedIds)
             // Add the mapping to the queue
             ext.nestedPromptQueue.enqueue(unnestedToNestedIds);
         }
