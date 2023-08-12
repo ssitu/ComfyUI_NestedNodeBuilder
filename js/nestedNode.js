@@ -488,7 +488,9 @@ export class NestedNode {
             let rerouteOutputLinks = null;
             if (node.type === "Reroute") {
                 rerouteInputLink = serializedNode.inputs[0].link;
-                rerouteOutputLinks = serializedNode.outputs[0].links.slice();
+                if (serializedNode.outputs[0].links) {
+                    rerouteOutputLinks = serializedNode.outputs[0].links.slice();
+                }
                 serializedNode.inputs[0].link = null;
                 serializedNode.outputs[0].links = [];
             }
@@ -497,7 +499,9 @@ export class NestedNode {
             // Restore links from Reroute node fix
             if (node.type === "Reroute") {
                 serializedNode.inputs[0].link = rerouteInputLink;
-                serializedNode.outputs[0].links = rerouteOutputLinks;
+                if (rerouteOutputLinks) {
+                    serializedNode.outputs[0].links = rerouteOutputLinks;
+                }
             }
 
             const dx = serializedNode.pos[0] - avgPos[0];
