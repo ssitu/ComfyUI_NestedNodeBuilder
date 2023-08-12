@@ -80,6 +80,7 @@ export class NestedNode {
         this.linksMapping = mapLinksToNodes(this.nestedNodes);
 
         this.inheritRerouteNodeInputs();
+        this.inheritRerouteNodeOutputs();
         this.inheritConvertedWidgets();
         this.inheritPrimitiveWidgets();
         this.renameInputs();
@@ -358,6 +359,17 @@ export class NestedNode {
         return input;
     }
 
+    insertOutput(name, type, index) {
+        // Similar to insertInput
+
+        // Add the new output
+        this.addOutput(name, type);
+        const output = this.outputs.pop();
+        this.outputs.splice(index, 0, output);
+        return output;
+    }
+
+
     inheritRerouteNodeInputs() {
         // Inherit the inputs of reroute nodes, since they are not added
         // to the node definition so they must be added manually.
@@ -368,8 +380,10 @@ export class NestedNode {
         for (const node of serialized) {
             if (node.type === "Reroute" && !this.inputs?.[inputIdx]?.isReroute) {
                 // Allow the use of titles on reroute nodes for custom input names
-                const inputName = node.title ? node.title : node.outputs[0].name;
-                const newInput = this.insertInput(inputName, node.outputs[0].name, inputIdx);
+                const rerouteName = node.outputs[0].name;
+                const rerouteType = node.outputs[0].type;
+                const inputName = node.title ? node.title : rerouteName;
+                const newInput = this.insertInput(inputName, rerouteType, inputIdx);
                 newInput.isReroute = true;
                 newInput.widget = node?.inputs?.[0]?.widget;
             }
@@ -379,6 +393,27 @@ export class NestedNode {
             }
         }
     }
+
+    inheritRerouteNodeOutputs() {
+        // Inherit the outputs of reroute nodes
+
+        let outputIdx = 0;
+        const serialized = this.nestedNodes;
+        const linksMapping = this.linksMapping;
+        for (const node of serialized) {
+            if (node.type === "Reroute" && !this.outputs?.[outputIdx]?.isReroute && !isOutputInternal(node, 0, linksMapping)) {
+                const rerouteName = node.outputs[0].name;
+                const rerouteType = node.outputs[0].type;
+                const outputName = node.title ? node.title : rerouteName;
+                const newOutput = this.insertOutput(outputName, rerouteType, outputIdx);
+                newOutput.isReroute = true;
+            }
+            for (let i = 0; i < (node.outputs ?? []).length; i++) {
+                if (!isOutputInternal(node, i, linksMapping)) outputIdx++;
+            }
+        }
+    }
+
 
     // Inherit the links of its serialized workflow, 
     // must be before the nodes that are being nested are removed from the graph
@@ -579,6 +614,7 @@ export class NestedNode {
                 if (node.type === "Reroute") {
                     const rerouteType = node.outputs[0].name;
                     isRerouteMatching = rerouteType === this.inputs[nestedInputSlot].type;
+                    isRerouteMatching = isRerouteMatching || rerouteType === "*";
                 }
                 if (node.inputs[inputSlot].type !== this.inputs[nestedInputSlot].type && !isRerouteMatching) {
                     continue;
