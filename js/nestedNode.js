@@ -646,13 +646,16 @@ export class NestedNode {
                 }
                 nestedConvertedWidgetSlot++;
             }
+            // Links the outputs of the nested node to the nodes outside the nested node
             for (let outputSlot = 0; outputSlot < (node.outputs ?? []).length; outputSlot++) {
                 // Out of bounds, rest of the outputs are not connected to the outside
                 if (nestedOutputSlot >= (this.outputs ?? []).length) {
                     break;
                 }
                 // If types don't match, then skip this output
-                if (node.outputs[outputSlot].type !== this.outputs[nestedOutputSlot].type) {
+                // Allow wildcard matches for reroute nodes
+                const isWildcardMatching = node.outputs[outputSlot].type === "*" || this.outputs[nestedOutputSlot].type === "*";
+                if (!isWildcardMatching && node.outputs[outputSlot].type !== this.outputs[nestedOutputSlot].type) {
                     continue;
                 }
                 // If the output is only connected internally, then skip this output
