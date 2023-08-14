@@ -14,13 +14,16 @@ export const ext = {
     nestedPromptQueue: new Queue([null]),
 
     async setup(app) {
-        // Extend queuePrompt behavior
-        const originalQueuePrompt = app.queuePrompt;
+        // Extend app.queuePrompt behavior
+        const originalAppQueuePrompt = app.queuePrompt;
         app.queuePrompt = async function (number, batchsize) {
+            // Save the current workflow
+            const nestedWorkflow = structuredClone(app.graph.serialize());
+
+            // Unnest all nested nodes
             const nestedNodesUnnested = {};
             const nestedNodes = {};
             const connectedInputNodes = {};
-            // Unnest all nested nodes
             const nodes = app.graph._nodes;
             for (const i in nodes) {
                 const node = nodes[i];
@@ -37,8 +40,21 @@ export const ext = {
                 nestedNodesUnnested[node.id] = unnestedNodes;
             }
 
+            // Replace the unnested workflow with the nested workflow
+            const originalApiQueuePrompt = api.queuePrompt;
+            api.queuePrompt = async function (number, promptData) {
+                const unnestedWorkflow = promptData.workflow;
+                promptData.workflow = nestedWorkflow;
+                const result = await originalApiQueuePrompt.apply(this, arguments);
+                promptData.workflow = unnestedWorkflow;
+                return result;
+            }
+
             // Call the original function
-            await originalQueuePrompt.call(this, number, batchsize);
+            await originalAppQueuePrompt.call(this, number, batchsize);
+
+            // Restore the original api.queuePrompt
+            api.queuePrompt = originalApiQueuePrompt;
 
             // Renest all nested nodes
             for (const nestedId in nestedNodesUnnested) {
