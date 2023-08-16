@@ -67,6 +67,12 @@ function averagePos(nodes) {
     return [x, y];
 }
 
+function getRerouteName(rerouteNode) {
+    const input = rerouteNode.inputs[0];
+    const output = rerouteNode.outputs[0];
+    return rerouteNode.title || input.label || output.label || output.type;
+}
+
 export class NestedNode {
 
     get nestedNodes() {
@@ -380,9 +386,8 @@ export class NestedNode {
         for (const node of serialized) {
             if (node.type === "Reroute" && !this.inputs?.[inputIdx]?.isReroute) {
                 // Allow the use of titles on reroute nodes for custom input names
-                const rerouteName = node.outputs[0].name;
                 const rerouteType = node.outputs[0].type;
-                const inputName = node.title ? node.title : rerouteName;
+                const inputName = getRerouteName(node);
                 const newInput = this.insertInput(inputName, rerouteType, inputIdx);
                 newInput.isReroute = true;
                 newInput.widget = node?.inputs?.[0]?.widget;
@@ -402,9 +407,8 @@ export class NestedNode {
         const linksMapping = this.linksMapping;
         for (const node of serialized) {
             if (node.type === "Reroute" && !this.outputs?.[outputIdx]?.isReroute && !isOutputInternal(node, 0, linksMapping)) {
-                const rerouteName = node.outputs[0].name;
                 const rerouteType = node.outputs[0].type;
-                const outputName = node.title ? node.title : rerouteName;
+                const outputName = getRerouteName(node);
                 const newOutput = this.insertOutput(outputName, rerouteType, outputIdx);
                 newOutput.isReroute = true;
             }
@@ -612,7 +616,7 @@ export class NestedNode {
                 // Must take into account reroute node wildcard inputs
                 let isRerouteMatching = false;
                 if (node.type === "Reroute") {
-                    const rerouteType = node.outputs[0].name;
+                    const rerouteType = node.outputs[0].type;
                     isRerouteMatching = rerouteType === this.inputs[nestedInputSlot].type;
                     isRerouteMatching = isRerouteMatching || rerouteType === "*";
                 }
