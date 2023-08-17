@@ -67,10 +67,10 @@ function averagePos(nodes) {
     return [x, y];
 }
 
-function getRerouteName(rerouteNode) {
+export function getRerouteName(rerouteNode) {
     const input = rerouteNode.inputs[0];
     const output = rerouteNode.outputs[0];
-    return rerouteNode.title || input.label || output.label || output.type;
+    return input.label || output.label || output.type;
 }
 
 export class NestedNode {
@@ -384,7 +384,7 @@ export class NestedNode {
         const serialized = this.nestedNodes;
         const linksMapping = this.linksMapping;
         for (const node of serialized) {
-            if (node.type === "Reroute" && !this.inputs?.[inputIdx]?.isReroute) {
+            if (node.type === "Reroute" && !this.inputs?.[inputIdx]?.isReroute && !isInputInternal(node, 0, linksMapping)) {
                 // Allow the use of titles on reroute nodes for custom input names
                 const rerouteType = node.outputs[0].type;
                 const inputName = getRerouteName(node);
@@ -616,16 +616,20 @@ export class NestedNode {
                 // Must take into account reroute node wildcard inputs
                 let isRerouteMatching = false;
                 if (node.type === "Reroute") {
-                    const rerouteType = node.outputs[0].type;
+                    const rerouteType = node.__outputType;  // Property that reroutes have
                     isRerouteMatching = rerouteType === this.inputs[nestedInputSlot].type;
-                    isRerouteMatching = isRerouteMatching || rerouteType === "*";
+                    isRerouteMatching = isRerouteMatching || rerouteType === undefined;  // Unconnected Reroute
                 }
-                if (node.inputs[inputSlot].type !== this.inputs[nestedInputSlot].type && !isRerouteMatching) {
+                const dstName = node.type === "Reroute" ? getRerouteName(node) : node.title;
+                let matchingTypes = node.inputs[inputSlot].type === this.inputs[nestedInputSlot].type;
+                matchingTypes ||= isRerouteMatching;
+                if (!matchingTypes) {
                     continue;
                 }
                 const link = this.getInputLink(nestedInputSlot);
                 if (link) { // Just in case
                     const originNode = app.graph.getNodeById(link.origin_id);
+                    const srcName = originNode.type === "Reroute" ? getRerouteName(originNode) : originNode.title;
                     originNode.connect(link.origin_slot, node, inputSlot);
                 }
                 nestedInputSlot++;

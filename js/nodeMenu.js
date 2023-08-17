@@ -399,12 +399,12 @@ export function mapLinksToNodes(serializedWorkflow) {
 function inheritInputs(node, nodeDef, nestedDef, linkMapping) {
     // For each input from nodeDef, add it to the nestedDef if the input is connected
     // to a node outside the serialized workflow
+    let linkInputIdx = 0;
     for (const inputType in (nodeDef?.input) ?? []) { // inputType is required, optional, etc.
         // Add the input type if it doesn't exist
         if (!(inputType in nestedDef.input)) {
             nestedDef.input[inputType] = {};
         }
-        let linkInputIdx = 0;
         for (const inputName in nodeDef.input[inputType]) {
             // Change the input name if it already exists
             let uniqueInputName = inputName;
