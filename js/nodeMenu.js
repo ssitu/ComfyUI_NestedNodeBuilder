@@ -416,8 +416,10 @@ function inheritInputs(node, nodeDef, nestedDef, linkMapping) {
     // For each input from nodeDef, add it to the nestedDef if the input is connected
     // to a node outside the serialized workflow
     let linkInputIdx = 0;
-    // Will use optional inputs as required to simplify logic. This is fine because the nested node itself isn't executed.
-    nestedDef.input["required"] = {};
+    // Add the required type
+    if (!("required" in nestedDef.input)) {
+        nestedDef.input["required"] = {};
+    }
     for (const inputType in (nodeDef?.input) ?? []) { // inputType is required, optional, etc.
         for (const inputName in nodeDef.input[inputType]) {
             // Change the input name if it already exists
