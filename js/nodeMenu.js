@@ -415,30 +415,30 @@ export function mapLinksToNodes(serializedWorkflow) {
 function inheritInputs(node, nodeDef, nestedDef, linkMapping) {
     // For each input from nodeDef, add it to the nestedDef if the input is connected
     // to a node outside the serialized workflow
+    let linkInputIdx = 0;
+    // Add the required type
+    if (!("required" in nestedDef.input)) {
+        nestedDef.input["required"] = {};
+    }
     for (const inputType in (nodeDef?.input) ?? []) { // inputType is required, optional, etc.
-        // Add the input type if it doesn't exist
-        if (!(inputType in nestedDef.input)) {
-            nestedDef.input[inputType] = {};
-        }
-        let linkInputIdx = 0;
         for (const inputName in nodeDef.input[inputType]) {
             // Change the input name if it already exists
             let uniqueInputName = inputName;
             let i = 2;
-            while (uniqueInputName in nestedDef.input[inputType]) {
+            while (uniqueInputName in nestedDef.input["required"]) {
                 uniqueInputName = inputName + "_" + i;
                 i++;
             }
             const isRemainingWidgets = node.inputs === undefined || linkInputIdx >= node.inputs.length;
             if (isRemainingWidgets || inputName !== node.inputs[linkInputIdx].name) {
                 // This input is a widget, add by default
-                nestedDef.input[inputType][uniqueInputName] = nodeDef.input[inputType][inputName];
+                nestedDef.input["required"][uniqueInputName] = nodeDef.input[inputType][inputName];
                 continue;
             }
 
             // Add the input if it is not connected to a node within the serialized workflow
             if (!isInputInternal(node, linkInputIdx, linkMapping)) {
-                nestedDef.input[inputType][uniqueInputName] = nodeDef.input[inputType][inputName];
+                nestedDef.input["required"][uniqueInputName] = nodeDef.input[inputType][inputName];
             }
             linkInputIdx++;
         }
