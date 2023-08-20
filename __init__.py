@@ -3,6 +3,8 @@ import shutil
 import json
 import os
 import sys
+import server
+from server import web
 
 try:
     dir_path = os.path.dirname(os.path.abspath(__file__))
@@ -92,47 +94,19 @@ def place_js():
     shutil.copytree(src, dst, dirs_exist_ok=True)
 
 
-def server_add_def_route():
-    # TODO: Find a better way to do this
-
-    import server
-    from server import web
-
-    # Save original
-    add_routes = server.PromptServer.add_routes
-
-    # Wrapper
-    def add_routes_wrapper(self):
-
-        # New routes
-        @self.routes.get('/nested_node_defs')
-        async def get_nested_node_defs(request):
-            nested_node_defs = load_nested_node_defs()
-            return web.json_response(nested_node_defs)
-
-        @self.routes.post('/nested_node_defs')
-        async def save_nested_node_def(request):
-            nested_def = await request.json()
-            save_nested_def(nested_def)
-            return web.Response(text="ok")
-
-        # Add routes
-        setattr(self, "get_nested_node_defs", get_nested_node_defs)
-        setattr(self, "save_nested_node_def", save_nested_node_def)
-
-        # Call original
-        add_routes(self)
-
-    # Replace original
-    setattr(server.PromptServer, "add_routes", add_routes_wrapper)
+@server.PromptServer.instance.routes.get('/nested_node_builder/nested_defs')
+async def server_add_def_route(request):
+    nested_node_defs = load_nested_node_defs()
+    return web.json_response(nested_node_defs)
 
 
-# Can run this script as main to copy the js files to the extensions folder while the server is running
-place_js()
+@server.PromptServer.instance.routes.post('/nested_node_builder/nested_defs')
+async def server_add_def_route(request):
+    nested_def = await request.json()
+    save_nested_def(nested_def)
+    return web.Response(text="ok")
 
-if __name__ != "__main__":
-    server_add_def_route()
 
-    # This is required so that the extension is displayed as imported successfully
-    NODE_CLASS_MAPPINGS = {}
-    __all__ = ["NODE_CLASS_MAPPINGS"]
+# This is required so that the extension is displayed as imported successfully
+NODE_CLASS_MAPPINGS = {}
+__all__ = ["NODE_CLASS_MAPPINGS"]

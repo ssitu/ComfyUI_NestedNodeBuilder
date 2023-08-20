@@ -138,7 +138,7 @@ export const ext = {
         // Save definitions for reference
         nodeDefs = defs;
         // Grab nested node definitions
-        const resp = await fetch("/nested_node_defs")
+        const resp = await api.fetchApi("/nested_node_builder/nested_defs")
         const nestedNodeDefs = await resp.json();
         // Merge nested node definitions
         Object.assign(this.nestedNodeDefs, nestedNodeDefs);
@@ -368,7 +368,7 @@ async function saveDef(nestedDef) {
         body: JSON.stringify(nestedDef)
     };
     console.log("[NestedNodeBuilder] Saving nested node def:", nestedDef);
-    const response = await fetch("/nested_node_defs", request);
+    const response = await api.fetchApi("/nested_node_builder/nested_defs", request);
     return response.status === 200;
 }
 
