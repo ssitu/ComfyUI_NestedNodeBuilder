@@ -106,7 +106,7 @@ async def server_add_def_route(request):
     save_nested_def(nested_def)
     return web.Response(text="ok")
 
-
+place_js()
 # This is required so that the extension is displayed as imported successfully
 NODE_CLASS_MAPPINGS = {}
 __all__ = ["NODE_CLASS_MAPPINGS"]
