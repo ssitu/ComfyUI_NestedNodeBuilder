@@ -416,29 +416,31 @@ function inheritInputs(node, nodeDef, nestedDef, linkMapping) {
     // For each input from nodeDef, add it to the nestedDef if the input is connected
     // to a node outside the serialized workflow
     let linkInputIdx = 0;
-    // Add the required type
-    if (!("required" in nestedDef.input)) {
-        nestedDef.input["required"] = {};
-    }
-    for (const inputType in (nodeDef?.input) ?? []) { // inputType is required, optional, etc.
+    for (const inputType in (nodeDef?.input) ?? []) { // inputType is required, optional, hidden, etc.
+        // Optional inputs will be added to required inputs to keep inputs order the same as the node order
+        const nestedInputType = inputType === "optional" ? "required" : inputType;
+        console.log("Input type:", inputType, "Nested input type:", nestedInputType)
+        if (!(nestedInputType in nestedDef.input)) {
+            nestedDef.input[nestedInputType] = {};
+        }
         for (const inputName in nodeDef.input[inputType]) {
             // Change the input name if it already exists
             let uniqueInputName = inputName;
             let i = 2;
-            while (uniqueInputName in nestedDef.input["required"]) {
+            while (uniqueInputName in nestedDef.input[nestedInputType]) {
                 uniqueInputName = inputName + "_" + i;
                 i++;
             }
             const isRemainingWidgets = node.inputs === undefined || linkInputIdx >= node.inputs.length;
             if (isRemainingWidgets || inputName !== node.inputs[linkInputIdx].name) {
                 // This input is a widget, add by default
-                nestedDef.input["required"][uniqueInputName] = nodeDef.input[inputType][inputName];
+                nestedDef.input[nestedInputType][uniqueInputName] = nodeDef.input[inputType][inputName];
                 continue;
             }
 
             // Add the input if it is not connected to a node within the serialized workflow
             if (!isInputInternal(node, linkInputIdx, linkMapping)) {
-                nestedDef.input["required"][uniqueInputName] = nodeDef.input[inputType][inputName];
+                nestedDef.input[nestedInputType][uniqueInputName] = nodeDef.input[inputType][inputName];
             }
             linkInputIdx++;
         }
