@@ -43,7 +43,7 @@ git clone https://github.com/ssitu/ComfyUI_NestedNodeBuilder
 - When nesting multiple nodes with widgets like control_after_generate, there can only be one in the resulting nested node.
 - Nested nodes can be nested, but nested nodes containing other nested nodes cannot execute.
 - When converting a seed widget to input and connecting it to a primitive node, the prompt will ignore the control_after_generate widget of the primitive node and yield to the underlying control_after_generate widget of the respective node. Can be solved by changing the values to "fixed" before nesting.
-- Can't really nest output nodes such as preview image and save image nodes. It works, but it won't display the image. You can still see the image if loading the prompt from the history.
+- Can't really nest output nodes such as preview image and save image nodes. It works, but it won't display the image.
 
 Feel free to open an issue if you find any other problems.
 
