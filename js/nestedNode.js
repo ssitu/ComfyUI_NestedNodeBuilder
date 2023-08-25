@@ -190,7 +190,7 @@ export class NestedNode {
             // Create a temporary node to get access to widgets that are not 
             // included in its node definition (e.g. control_after_generate)
             const tempNode = LiteGraph.createNode(node.type);
-            if (tempNode.type == "PrimitiveNode" && node.outputs[0].links) {
+            if (tempNode !== null && tempNode.type == "PrimitiveNode" && node.outputs[0].links) {
                 const tempGraph = new LiteGraph.LGraph();
                 tempGraph.add(tempNode);
                 const linkId = node.outputs[0].links[0];
@@ -518,20 +518,26 @@ export class NestedNode {
         const serializedToNodeMapping = {};
         for (const idx in serializedWorkflow) {
             const serializedNode = serializedWorkflow[idx];
-            const node = LiteGraph.createNode(serializedNode.type);
-
-            // Fix for Primitive nodes, which check for the existence of the graph
-            node.graph = app.graph;
-            // Fix for Reroute nodes, which executes code if it has a link, but the link wouldn't be valid here.
-            let rerouteInputLink = null;
-            let rerouteOutputLinks = null;
-            if (node.type === "Reroute") {
-                rerouteInputLink = serializedNode.inputs[0].link;
-                if (serializedNode.outputs[0].links) {
-                    rerouteOutputLinks = serializedNode.outputs[0].links.slice();
+            let node = LiteGraph.createNode(serializedNode.type);
+            if (node) {
+                // Fix for Primitive nodes, which check for the existence of the graph
+                node.graph = app.graph;
+                // Fix for Reroute nodes, which executes code if it has a link, but the link wouldn't be valid here.
+                let rerouteInputLink = null;
+                let rerouteOutputLinks = null;
+                if (node.type === "Reroute") {
+                    rerouteInputLink = serializedNode.inputs[0].link;
+                    if (serializedNode.outputs[0].links) {
+                        rerouteOutputLinks = serializedNode.outputs[0].links.slice();
+                    }
+                    serializedNode.inputs[0].link = null;
+                    serializedNode.outputs[0].links = [];
                 }
-                serializedNode.inputs[0].link = null;
-                serializedNode.outputs[0].links = [];
+            } else {
+                // Create an empty missing node, use same code as LiteGraph
+                node = new LiteGraph.LGraphNode();
+                node.last_serialization = serializedNode;
+                node.has_errors = true;
             }
             // Configure the node
             node.configure(serializedNode);

@@ -14,13 +14,16 @@ export const ext = {
     nestedPromptQueue: new Queue([null]),
 
     async setup(app) {
-        // Extend queuePrompt behavior
-        const originalQueuePrompt = app.queuePrompt;
+        // Extend app.queuePrompt behavior
+        const originalAppQueuePrompt = app.queuePrompt;
         app.queuePrompt = async function (number, batchsize) {
+            // Save the current workflow
+            const nestedWorkflow = structuredClone(app.graph.serialize());
+
+            // Unnest all nested nodes
             const nestedNodesUnnested = {};
             const nestedNodes = {};
             const connectedInputNodes = {};
-            // Unnest all nested nodes
             const nodes = app.graph._nodes;
             for (const i in nodes) {
                 const node = nodes[i];
@@ -37,8 +40,21 @@ export const ext = {
                 nestedNodesUnnested[node.id] = unnestedNodes;
             }
 
+            // Replace the unnested workflow with the nested workflow
+            const originalApiQueuePrompt = api.queuePrompt;
+            api.queuePrompt = async function (number, promptData) {
+                const unnestedWorkflow = promptData.workflow;
+                promptData.workflow = nestedWorkflow;
+                const result = await originalApiQueuePrompt.apply(this, arguments);
+                promptData.workflow = unnestedWorkflow;
+                return result;
+            }
+
             // Call the original function
-            await originalQueuePrompt.call(this, number, batchsize);
+            await originalAppQueuePrompt.call(this, number, batchsize);
+
+            // Restore the original api.queuePrompt
+            api.queuePrompt = originalApiQueuePrompt;
 
             // Renest all nested nodes
             for (const nestedId in nestedNodesUnnested) {
@@ -122,7 +138,7 @@ export const ext = {
         // Save definitions for reference
         nodeDefs = defs;
         // Grab nested node definitions
-        const resp = await fetch("/nested_node_defs")
+        const resp = await api.fetchApi("/nested_node_builder/nested_defs")
         const nestedNodeDefs = await resp.json();
         // Merge nested node definitions
         Object.assign(this.nestedNodeDefs, nestedNodeDefs);
@@ -352,7 +368,7 @@ async function saveDef(nestedDef) {
         body: JSON.stringify(nestedDef)
     };
     console.log("[NestedNodeBuilder] Saving nested node def:", nestedDef);
-    const response = await fetch("/nested_node_defs", request);
+    const response = await api.fetchApi("/nested_node_builder/nested_defs", request);
     return response.status === 200;
 }
 
@@ -400,29 +416,29 @@ function inheritInputs(node, nodeDef, nestedDef, linkMapping) {
     // For each input from nodeDef, add it to the nestedDef if the input is connected
     // to a node outside the serialized workflow
     let linkInputIdx = 0;
+    // Add the required type
+    if (!("required" in nestedDef.input)) {
+        nestedDef.input["required"] = {};
+    }
     for (const inputType in (nodeDef?.input) ?? []) { // inputType is required, optional, etc.
-        // Add the input type if it doesn't exist
-        if (!(inputType in nestedDef.input)) {
-            nestedDef.input[inputType] = {};
-        }
         for (const inputName in nodeDef.input[inputType]) {
             // Change the input name if it already exists
             let uniqueInputName = inputName;
             let i = 2;
-            while (uniqueInputName in nestedDef.input[inputType]) {
+            while (uniqueInputName in nestedDef.input["required"]) {
                 uniqueInputName = inputName + "_" + i;
                 i++;
             }
             const isRemainingWidgets = node.inputs === undefined || linkInputIdx >= node.inputs.length;
             if (isRemainingWidgets || inputName !== node.inputs[linkInputIdx].name) {
                 // This input is a widget, add by default
-                nestedDef.input[inputType][uniqueInputName] = nodeDef.input[inputType][inputName];
+                nestedDef.input["required"][uniqueInputName] = nodeDef.input[inputType][inputName];
                 continue;
             }
 
             // Add the input if it is not connected to a node within the serialized workflow
             if (!isInputInternal(node, linkInputIdx, linkMapping)) {
-                nestedDef.input[inputType][uniqueInputName] = nodeDef.input[inputType][inputName];
+                nestedDef.input["required"][uniqueInputName] = nodeDef.input[inputType][inputName];
             }
             linkInputIdx++;
         }
