@@ -519,12 +519,12 @@ export class NestedNode {
         for (const idx in serializedWorkflow) {
             const serializedNode = serializedWorkflow[idx];
             let node = LiteGraph.createNode(serializedNode.type);
+            let rerouteInputLink = null;
+            let rerouteOutputLinks = null;
             if (node) {
                 // Fix for Primitive nodes, which check for the existence of the graph
                 node.graph = app.graph;
                 // Fix for Reroute nodes, which executes code if it has a link, but the link wouldn't be valid here.
-                let rerouteInputLink = null;
-                let rerouteOutputLinks = null;
                 if (node.type === "Reroute") {
                     rerouteInputLink = serializedNode.inputs[0].link;
                     if (serializedNode.outputs[0].links) {
