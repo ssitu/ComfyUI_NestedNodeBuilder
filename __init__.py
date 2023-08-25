@@ -106,7 +106,14 @@ async def server_add_def_route(request):
     save_nested_def(nested_def)
     return web.Response(text="ok")
 
-place_js()
+#
+# Setup
+#
+WEB_DIRECTORY = "./js"
+skip_js_copy = hasattr(server.PromptServer.instance, "supports") and "custom_nodes_from_web" in server.PromptServer.instance.supports
+if not skip_js_copy:
+    print("[NestedNodeBuilder] Installed ComfyUI version doesn't support in-place web extension loading. Copying files to web directory...")
+    place_js()
 # This is required so that the extension is displayed as imported successfully
 NODE_CLASS_MAPPINGS = {}
-__all__ = ["NODE_CLASS_MAPPINGS"]
+__all__ = ["NODE_CLASS_MAPPINGS", "WEB_DIRECTORY"]
