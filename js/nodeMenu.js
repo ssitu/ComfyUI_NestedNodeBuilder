@@ -419,7 +419,6 @@ function inheritInputs(node, nodeDef, nestedDef, linkMapping) {
     for (const inputType in (nodeDef?.input) ?? []) { // inputType is required, optional, hidden, etc.
         // Optional inputs will be added to required inputs to keep inputs order the same as the node order
         const nestedInputType = inputType === "optional" ? "required" : inputType;
-        console.log("Input type:", inputType, "Nested input type:", nestedInputType)
         if (!(nestedInputType in nestedDef.input)) {
             nestedDef.input[nestedInputType] = {};
         }
