@@ -227,7 +227,7 @@ export class NestedNode {
                 const thisWidget = this.widgets?.[widgetIdx];
                 const tempWidget = tempNode?.widgets?.[j];
                 // If primitive, then tempWidget will always be undefined
-                if (!thisWidget || (!tempWidget && tempNode.type !== "PrimitiveNode")) {
+                if (!thisWidget || (!tempWidget && tempNode?.type !== "PrimitiveNode")) {
                     continue;
                 }
                 // Remove trailing numbers from the name
