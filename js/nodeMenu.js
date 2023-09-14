@@ -344,7 +344,8 @@ export const ext = {
                 });
             },
             (error) => {
-                app.ui.dialog.show(`Was unable to save the nested node. Check the console for more details.`);
+                app.ui.dialog.show(`Was unable to save the nested node. Check the browser console for more details.`);
+                console.log("Error saving nested node:", error);
             }
         );
     },
