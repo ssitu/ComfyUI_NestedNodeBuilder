@@ -8,23 +8,11 @@ export const nestedNodeTitle = "Nested Node";
 const HIDDEN_CONVERTED_TYPE = "hidden-converted-widget";
 const INHERITED_CONVERTED_TYPE = "inherited-converted-widget";
 
-
 export function serializeWorkflow(workflow) {
     let nodes = [];
     for (const id in workflow) {
         const node = workflow[id];
-        let serialized = LiteGraph.cloneObject(node.serialize());
-
-        // Add widgets to the serialization
-        serialized.serializedWidgets = [];
-        for (const widgetIdx in node.widgets) {
-            const { ...widget } = node.widgets[widgetIdx];
-            // Remove possible circular reference (text boxes have a reference to the parent)
-            delete widget.parent;
-            serialized.serializedWidgets.push(LiteGraph.cloneObject(widget));
-        }
-
-        nodes.push(serialized);
+        nodes.push(LiteGraph.cloneObject(node.serialize()));
     }
     return nodes;
 }
@@ -92,7 +80,6 @@ export class NestedNode {
     }
 
     nestedNodeSetup() {
-        // Called every time a nested node is loaded
         console.log("[NestedNodeBuilder] Nested node setup")
         this.addWidgetListeners();
         this.nestedNodeIdMapping = arrToIdMap(this.nestedNodes);
@@ -102,11 +89,9 @@ export class NestedNode {
         this.inheritRerouteNodeOutputs();
         this.inheritConvertedWidgets();
         this.inheritPrimitiveWidgets();
-        this.widgetMapping = this.createWidgetMapping();
         this.renameInputs();
         this.resizeNestedNode();
         this.inheritWidgetValues();
-
 
         // Avoid widgetInputs.js from changing the widget type
         const origOnConfigure = this.onConfigure;
@@ -150,15 +135,18 @@ export class NestedNode {
 
     // Nest the workflow within this node
     nestWorkflow(workflow) {
-        // Called when user makes a nested node
         console.log("[NestedNodeBuilder] Nesting workflow")
         // Node setup
         this.properties.nestedData = { nestedNodes: serializeWorkflow(workflow) };
         this.linksMapping = mapLinksToNodes(this.nestedNodes);
         this.placeNestedNode(workflow);
+        // this.inheritRerouteNodeInputs();
+        // this.inheritConvertedWidgets();
+        // this.renameInputs();
         this.inheritLinks();
         this.inheritWidgetValues();
         this.removeNestedNodes(workflow);
+        // this.resizeNestedNode();
     }
 
     // Remove the nodes that are being nested
@@ -224,15 +212,35 @@ export class NestedNode {
         }
     }
 
+    // Inherit the widget values of its serialized workflow
     inheritWidgetValues() {
-        // Inherit the widget values of the serialized workflow
         const serialized = this.nestedNodes;
-        const widgetMapping = this.widgetMapping;
-        for (const widgetIdx in widgetMapping) {
-            const widget = this.widgets[widgetIdx];
-            const { nodeIdx, widgetIdx: widgetIdx2 } = widgetMapping[widgetIdx];
-            const node = serialized[nodeIdx];
-            widget.value = node.widgets_values[widgetIdx2];
+        this.widgets_values = [];
+        let widgetIdx = 0;
+        for (const i in serialized) {
+            const node = serialized[i];
+            // Create a temporary node to get access to widgets that are not 
+            // included in its node definition (e.g. control_after_generate)
+            const tempNode = LiteGraph.createNode(node.type);
+            for (const j in node.widgets_values) {
+                // Must skip widgets that were unable to be added to the nested node
+                const thisWidget = this.widgets?.[widgetIdx];
+                const tempWidget = tempNode?.widgets?.[j];
+                // If primitive, then tempWidget will always be undefined
+                if (!thisWidget || (!tempWidget && tempNode?.type !== "PrimitiveNode")) {
+                    continue;
+                }
+                // Remove trailing numbers from the name
+                const thisWidgetName = thisWidget?.name.replace(/_\d+$/, '');
+                const primitveMatch = node.type === "PrimitiveNode" && thisWidget?.name === node.title;
+                if (thisWidgetName !== tempWidget?.name && !primitveMatch) {
+                    continue;
+                }
+                const widget_value = node.widgets_values[j];
+                this.widgets_values.push(widget_value);
+                this.widgets[widgetIdx].value = widget_value;
+                widgetIdx++;
+            }
         }
     }
 
@@ -284,47 +292,39 @@ export class NestedNode {
         }
     }
 
-    createWidgetMapping() {
-        // Map nested widget index to serialized node index and widget index
+    updateSerializedWorkflow() {
+        // Update the serialized workflow with the current values of the widgets
         const serialized = this.nestedNodes;
-        const widgetMapping = {};
         let widgetIdx = 0;
         for (const i in serialized) {
             const node = serialized[i];
+            const tempNode = LiteGraph.createNode(node.type);
             for (const j in node.widgets_values) {
-                const nestedWidget = this.widgets?.[widgetIdx];
-                if (!nestedWidget) break;
 
-                const serializedWidget = node?.serializedWidgets?.[j];
-                if (!serializedWidget) break;
-                if (serializedWidget.type === INHERITED_CONVERTED_TYPE || serializedWidget.type === HIDDEN_CONVERTED_TYPE || serializedWidget.type === CONVERTED_TYPE) {
-                    // Skip converted widgets
-                    continue;
-                }
+                const thisWidget = this.widgets?.[widgetIdx];
+                if (!thisWidget) continue;
+                const tempWidget = tempNode?.widgets?.[j];
 
-                if (node.type === "PrimitiveNode") {
-                    widgetMapping[widgetIdx] = { nodeIdx: i, widgetIdx: j };
+                if (node.type !== "PrimitiveNode") {
+                    // Undefined widget
+                    if (!tempWidget) continue;
+
+                    const thisWidgetName = thisWidget?.name.replace(/_\d+$/, '');
+                    if (thisWidgetName !== tempWidget?.name) continue;
+                    node.widgets_values[j] = thisWidget.value;
+                    widgetIdx++;
+                } else {
+                    // Widgets for Primitive nodes will always be undefined
+                    const thisWidgetName = thisWidget?.name.replace(/_\d+$/, '');
+                    if (thisWidgetName !== node.title) continue;
+
+                    node.widgets_values[j] = thisWidget.value;
                     widgetIdx++;
                     // Skip the rest of the widgets of the primitive node, only care about the value widget
                     break;
                 }
-                widgetMapping[widgetIdx] = { nodeIdx: i, widgetIdx: j };
-                widgetIdx++;
 
             }
-        }
-        return widgetMapping;
-    }
-
-    updateSerializedWorkflow() {
-        // Update the serialized workflow with the current values of the widgets
-        const mapping = this.widgetMapping;
-        const serialized = this.nestedNodes;
-        for (const widgetIdx in mapping) {
-            const widget = this.widgets[widgetIdx];
-            const { nodeIdx, widgetIdx: widgetIdx2 } = mapping[widgetIdx];
-            const node = serialized[nodeIdx];
-            node.widgets_values[widgetIdx2] = widget.value;
         }
     }
 
@@ -351,7 +351,7 @@ export class NestedNode {
     }
 
     beforeQueuePrompt() {
-        this.updateSerializedWorkflow();
+        this.updateSerializedWorkflow()
     }
 
     insertInput(name, type, index) {
