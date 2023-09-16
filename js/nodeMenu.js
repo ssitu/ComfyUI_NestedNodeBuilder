@@ -425,7 +425,7 @@ function inheritInputs(node, nodeDef, nestedDef, linkMapping) {
         }
         for (const inputName in nodeDef.input[inputType]) {
             // Change the input name if it already exists
-            let uniqueInputName = inputName;
+            let uniqueInputName = inputName + "_1";
             let i = 2;
             while (uniqueInputName in nestedDef.input[nestedInputType]) {
                 uniqueInputName = inputName + "_" + i;
