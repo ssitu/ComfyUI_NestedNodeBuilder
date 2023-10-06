@@ -18,7 +18,7 @@ export const ext = {
         const originalAppQueuePrompt = app.queuePrompt;
         app.queuePrompt = async function (number, batchsize) {
             // Save the current workflow
-            const nestedWorkflow = structuredClone(app.graph.serialize());
+            const nestedWorkflow = JSON.parse(JSON.stringify(app.graph.serialize()));
 
             // Unnest all nested nodes
             const nestedNodesUnnested = {};
