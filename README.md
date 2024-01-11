@@ -1,3 +1,8 @@
+# Archived (1/11/2024)
+An identical feature now exists in ComfyUI. Additionally, this extension is largely broken with the recent versions of the codebase, so please use the built-in feature for group nodes.
+
+Original Description Below
+---
 # ComfyUI_NestedNodeBuilder
 Adds a feature for the default interface in [ComfyUI](https://github.com/comfyanonymous/ComfyUI) that allows for nesting of other nodes for better organization and simplification of repetitive patterns in workflows.
 
